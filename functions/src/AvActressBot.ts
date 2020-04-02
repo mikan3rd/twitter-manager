@@ -1,6 +1,7 @@
 import * as Twitter from 'twitter';
 import axios from 'axios';
 import * as functions from 'firebase-functions';
+import * as admin from 'firebase-admin';
 
 import {
   DMMApiClient,
@@ -9,6 +10,12 @@ import {
   ItemGenreType,
   ActressType
 } from './DMMApiClient';
+
+admin.initializeApp();
+const ref = admin
+  .firestore()
+  .collection('twitter')
+  .doc('av_actress_bot');
 
 const TWITTER_ENV = functions.config().twitter;
 const CONSUMER_KEY = TWITTER_ENV.av_video_bot_consumer_key;
@@ -27,6 +34,9 @@ export const tweetAvPackage = async () => {
 };
 
 const getTargetActress = async () => {
+  const doc = await ref.get();
+  const selectedActressIds: number[] = doc.data()?.selectedActressIds || [];
+
   const itemResponse = await DMMApiClient.getItemList({ keyword: '単体作品' });
   const {
     data: {
@@ -35,14 +45,23 @@ const getTargetActress = async () => {
   } = itemResponse;
   const actressNestedList = items.map(item => item.iteminfo.actress);
   const actressList = ([] as ItemActressType[]).concat(...actressNestedList);
-  const actressObject: { [id: number]: ItemActressType } = {};
-  actressList.forEach(actress => {
-    actressObject[actress.id] = actress;
-  });
-  const uniqueActressList = Object.values(actressObject);
-  const targetActress =
-    uniqueActressList[Math.floor(Math.random() * uniqueActressList.length)];
+
+  let targetActress = actressList.find(
+    actress => !selectedActressIds.includes(actress.id)
+  );
+
+  if (!targetActress) {
+    console.log('New Actress Not Found!');
+    targetActress = actressList[0];
+  }
+
   console.log(targetActress);
+
+  await ref.set(
+    { selectedActressIds: selectedActressIds.concat([targetActress.id]) },
+    { merge: true }
+  );
+
   return targetActress;
 };
 
@@ -50,11 +69,11 @@ const getActressInfo = async (actressId: number) => {
   const actressResponse = await DMMApiClient.getActressSearch({ actressId });
   const {
     data: {
-      result: { actress }
+      result: { result_count, actress }
     }
   } = actressResponse;
-  if (actress.length === 0) {
-    console.error(actressId);
+  if (result_count === 0) {
+    throw new Error(`actressId: ${actressId} not found`);
   }
   return actress[0];
 };
