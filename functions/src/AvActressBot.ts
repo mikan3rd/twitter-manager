@@ -37,31 +37,46 @@ const getTargetActress = async () => {
   const doc = await ref.get();
   let selectedActressIds: number[] = doc.data()?.selectedActressIds || [];
 
-  const itemResponse = await DMMApiClient.getItemList({ keyword: '単体作品' });
-  const {
-    data: {
-      result: { items }
-    }
-  } = itemResponse;
-  const actressNestedList = items.map(item => item.iteminfo.actress);
-  const actressList = ([] as ItemActressType[]).concat(...actressNestedList);
+  const LIMIT = 10;
+  let targetActress;
+  let firstActress;
+  for (const i of Array(LIMIT).keys()) {
+    const itemResponse = await DMMApiClient.getItemList({
+      keyword: '単体作品',
+      offset: i * 100 + 1
+    });
+    const {
+      data: {
+        result: { items, total_count }
+      }
+    } = itemResponse;
 
-  let targetActress = actressList.find(
-    actress => !selectedActressIds.includes(actress.id)
-  );
+    const actressNestedList = items.map(item => item.iteminfo.actress);
+    const actressList = ([] as ItemActressType[]).concat(...actressNestedList);
+    if (i === 0) {
+      firstActress = actressList[0];
+    }
+
+    targetActress = actressList.find(
+      actress => !selectedActressIds.includes(actress.id)
+    );
+
+    if (targetActress) {
+      break;
+    }
+  }
 
   if (!targetActress) {
     console.log('New Actress Not Found!');
-    targetActress = actressList[0];
+    targetActress = firstActress as ItemActressType;
     selectedActressIds = [];
   }
 
+  selectedActressIds = selectedActressIds.concat([targetActress.id]);
   console.log(targetActress);
+  console.log('selectedActressIds:', selectedActressIds.length);
 
-  await ref.set(
-    { selectedActressIds: selectedActressIds.concat([targetActress.id]) },
-    { merge: true }
-  );
+  await ref.set({ selectedActressIds }, { merge: true });
 
   return targetActress;
 };
