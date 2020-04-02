@@ -35,7 +35,7 @@ export const tweetAvPackage = async () => {
 
 const getTargetActress = async () => {
   const doc = await ref.get();
-  const selectedActressIds: number[] = doc.data()?.selectedActressIds || [];
+  let selectedActressIds: number[] = doc.data()?.selectedActressIds || [];
 
   const itemResponse = await DMMApiClient.getItemList({ keyword: '単体作品' });
   const {
@@ -53,6 +53,7 @@ const getTargetActress = async () => {
   if (!targetActress) {
     console.log('New Actress Not Found!');
     targetActress = actressList[0];
+    selectedActressIds = [];
   }
 
   console.log(targetActress);
