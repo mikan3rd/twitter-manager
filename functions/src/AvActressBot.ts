@@ -3,13 +3,7 @@ import axios from 'axios';
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
-import {
-  DMMApiClient,
-  ItemActressType,
-  ItemType,
-  ItemGenreType,
-  ActressType
-} from './DMMApiClient';
+import { DMMApiClient, ItemActressType, ItemType, ItemGenreType, ActressType } from './DMMApiClient';
 
 admin.initializeApp();
 const ref = admin
@@ -24,9 +18,8 @@ const ACCESS_TOKEN_KEY = TWITTER_ENV.av_video_bot_access_token_key;
 const ACCESS_TOKEN_SECRET = TWITTER_ENV.av_video_bot_access_token_secret;
 
 export const tweetAvPackage = async () => {
-  const actress = await getTargetActress();
-  const actressInfo = await getActressInfo(actress.id);
-  const actressItems = await getActressItems(actress.id);
+  const actressInfo = await getTargetActress();
+  const actressItems = await getActressItems(Number(actressInfo.id));
   const status = getAvPackageStatus(actressInfo, actressItems);
   const images = actressItems.map(item => item['imageURL']['large']);
   const mediaIds = await uploadImages(images);
@@ -41,25 +34,37 @@ const getTargetActress = async () => {
   let targetActress;
   let firstActress;
   for (const i of Array(LIMIT).keys()) {
+    console.log(`${i + 1} / ${LIMIT}`);
     const itemResponse = await DMMApiClient.getItemList({
       keyword: '単体作品',
-      offset: i * 100 + 1
+      offset: i * 100 + 1,
     });
     const {
       data: {
-        result: { items, total_count }
-      }
+        result: { items },
+      },
     } = itemResponse;
 
     const actressNestedList = items.map(item => item.iteminfo.actress);
     const actressList = ([] as ItemActressType[]).concat(...actressNestedList);
-    if (i === 0) {
-      firstActress = actressList[0];
-    }
 
-    targetActress = actressList.find(
-      actress => !selectedActressIds.includes(actress.id)
-    );
+    for (const tmpActress of actressList) {
+      if (!firstActress) {
+        const result = await getActressInfo(tmpActress.id);
+        if (result) {
+          firstActress = result;
+        }
+      }
+      if (selectedActressIds.includes(tmpActress.id)) {
+        continue;
+      }
+      const actress = await getActressInfo(tmpActress.id);
+      if (actress) {
+        targetActress = actress;
+        break;
+      }
+      selectedActressIds = selectedActressIds.concat([tmpActress.id]);
+    }
 
     if (targetActress) {
       break;
@@ -68,11 +73,11 @@ const getTargetActress = async () => {
 
   if (!targetActress) {
     console.log('New Actress Not Found!');
-    targetActress = firstActress as ItemActressType;
+    targetActress = firstActress as ActressType;
     selectedActressIds = [];
   }
 
-  selectedActressIds = selectedActressIds.concat([targetActress.id]);
+  selectedActressIds = selectedActressIds.concat([Number(targetActress.id)]);
   console.log(targetActress);
   console.log('selectedActressIds:', selectedActressIds.length);
 
@@ -85,11 +90,11 @@ const getActressInfo = async (actressId: number) => {
   const actressResponse = await DMMApiClient.getActressSearch({ actressId });
   const {
     data: {
-      result: { result_count, actress }
-    }
+      result: { result_count, actress },
+    },
   } = actressResponse;
   if (result_count === 0) {
-    throw new Error(`actressId: ${actressId} not found`);
+    return null;
   }
   return actress[0];
 };
@@ -98,32 +103,18 @@ const getActressItems = async (actressId: number) => {
   const response = await DMMApiClient.getItemList({
     keyword: '単体作品',
     article: 'actress',
-    articleId: actressId
+    articleId: actressId,
   });
   const {
     data: {
-      result: { items }
-    }
+      result: { items },
+    },
   } = response;
   return items;
 };
 
-const getAvPackageStatus = (
-  actressInfo: ActressType,
-  actressItems: ItemType[]
-) => {
-  const {
-    name,
-    ruby,
-    height,
-    cup,
-    bust,
-    waist,
-    hip,
-    hobby,
-    birthday,
-    prefectures
-  } = actressInfo;
+const getAvPackageStatus = (actressInfo: ActressType, actressItems: ItemType[]) => {
+  const { name, ruby, height, cup, bust, waist, hip, hobby, birthday, prefectures } = actressInfo;
   let mainContentList = ['', `【女優】${name}`];
   if (ruby && ruby !== name) {
     mainContentList = mainContentList.concat([`【よみがな】${ruby}`]);
@@ -135,9 +126,7 @@ const getAvPackageStatus = (
     mainContentList = mainContentList.concat([`【カップ】${cup}カップ`]);
   }
   if (bust && waist && hip) {
-    mainContentList = mainContentList.concat([
-      `【サイズ】B:${bust} W:${waist} H:${hip}`
-    ]);
+    mainContentList = mainContentList.concat([`【サイズ】B:${bust} W:${waist} H:${hip}`]);
   }
   if (birthday) {
     mainContentList = mainContentList.concat([`【誕生日】${birthday}`]);
@@ -149,11 +138,7 @@ const getAvPackageStatus = (
     mainContentList = mainContentList.concat([`【趣味】${hobby}`]);
   }
   mainContentList = mainContentList.concat(['']);
-  const linkContentList = [
-    '',
-    '【この女優の動画はコチラ！】',
-    actressInfo['listURL']['digital']
-  ];
+  const linkContentList = ['', '【この女優の動画はコチラ！】', actressInfo['listURL']['digital']];
   const nestedGenreList = actressItems.map(item => item.iteminfo.genre);
   const genreList = ([] as ItemGenreType[]).concat(...nestedGenreList);
   const genreObject: {
@@ -163,7 +148,7 @@ const getAvPackageStatus = (
     if (genreObject[genre.id]) {
       genreObject[genre.id] = {
         genre,
-        count: genreObject[genre.id].count + 1
+        count: genreObject[genre.id].count + 1,
       };
     } else {
       genreObject[genre.id] = { genre, count: 1 };
@@ -176,9 +161,7 @@ const getAvPackageStatus = (
   const hashtagList = [`#${name}`, ...sortedGenreList];
   let status = '';
   while (true) {
-    status = mainContentList
-      .concat([hashtagList.join(' '), ...linkContentList])
-      .join('\n');
+    status = mainContentList.concat([hashtagList.join(' '), ...linkContentList]).join('\n');
     if (status.length < 280) {
       break;
     }
@@ -196,14 +179,14 @@ const uploadImages = async (images: string[]) => {
     consumer_key: CONSUMER_KEY,
     consumer_secret: CONSUMER_SECRET,
     access_token_key: ACCESS_TOKEN_KEY,
-    access_token_secret: ACCESS_TOKEN_SECRET
+    access_token_secret: ACCESS_TOKEN_SECRET,
   });
 
   const mediaIds: string[] = [];
   for (const imageUrl of images) {
     const { data } = await axios.get(imageUrl, { responseType: 'arraybuffer' });
     const { media_id_string } = await client.post('media/upload', {
-      media: data
+      media: data,
     });
     mediaIds.push(media_id_string);
     if (mediaIds.length >= 4) {
@@ -213,22 +196,16 @@ const uploadImages = async (images: string[]) => {
   return mediaIds;
 };
 
-const postTweet = async ({
-  status,
-  mediaIds = []
-}: {
-  status: string;
-  mediaIds?: string[];
-}) => {
+const postTweet = async ({ status, mediaIds = [] }: { status: string; mediaIds?: string[] }) => {
   const client = new Twitter({
     consumer_key: CONSUMER_KEY,
     consumer_secret: CONSUMER_SECRET,
     access_token_key: ACCESS_TOKEN_KEY,
-    access_token_secret: ACCESS_TOKEN_SECRET
+    access_token_secret: ACCESS_TOKEN_SECRET,
   });
   const params = {
     status,
-    media_ids: mediaIds.join(',')
+    media_ids: mediaIds.join(','),
   };
   return await client.post('statuses/update', params);
 };
