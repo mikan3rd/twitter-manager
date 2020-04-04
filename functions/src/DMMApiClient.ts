@@ -39,8 +39,12 @@ export type ItemType = {
     small: string;
     large: string;
   };
-  sampleImageURL: {};
-  sampleMovieURL: {};
+  sampleImageURL: {
+    sample_s: { image: string[] };
+  };
+  sampleMovieURL?: {
+    size_720_480: string;
+  };
   prices: {};
   date: string;
   iteminfo: { actress: ItemActressType[]; genre: ItemGenreType };
@@ -95,7 +99,7 @@ export class DMMApiClient {
     article = null,
     articleId = null,
     hits = 100,
-    offset = 1
+    offset = 1,
   }: {
     site?: 'FANZA' | 'DMM.com';
     service?: string;
@@ -120,14 +124,14 @@ export class DMMApiClient {
       article_id: articleId,
       hits,
       offset,
-      output: 'json'
+      output: 'json',
     };
     return await axios.get<ItemResponse>(url, { params });
   }
 
   static async getActressSearch({
     keyword = null,
-    actressId = null
+    actressId = null,
   }: {
     keyword?: string | null;
     actressId?: number | null;
@@ -138,7 +142,7 @@ export class DMMApiClient {
       affiliate_id: DMM_AFFILIATE_ID,
       actress_id: actressId,
       keyword: keyword,
-      output: 'json'
+      output: 'json',
     };
     return await axios.get<ActressSearchResponse>(url, { params });
   }

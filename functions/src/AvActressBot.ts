@@ -5,7 +5,6 @@ import * as admin from 'firebase-admin';
 
 import { DMMApiClient, ItemActressType, ItemType, ItemGenreType, ActressType } from './DMMApiClient';
 
-admin.initializeApp();
 const ref = admin
   .firestore()
   .collection('twitter')
