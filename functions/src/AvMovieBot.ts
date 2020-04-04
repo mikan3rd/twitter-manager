@@ -3,6 +3,15 @@ import axios from 'axios';
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import * as puppeteer from 'puppeteer';
+import * as ffmpeg from 'fluent-ffmpeg';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import * as ffmpeg_static from 'ffmpeg-static';
+import * as ffprobe_static from 'ffprobe-static';
+
+ffmpeg.setFfmpegPath(ffmpeg_static);
+ffmpeg.setFfprobePath(ffprobe_static.path);
 
 import { DMMApiClient, ItemType, ItemGenreType } from './DMMApiClient';
 
@@ -44,6 +53,28 @@ const getTargetItem = async () => {
       continue;
     }
     console.log(url);
+
+    const videoResponse = await axios.get(url, { responseType: 'arraybuffer' });
+
+    const { headers, data } = videoResponse;
+    console.log(headers);
+    const media_type = headers['content-type'];
+    const total_bytes = headers['content-length'];
+
+    const fileName = `av_movie_bot${path.extname(url)}`;
+    const tmpPath = path.join(os.tmpdir(), fileName);
+    console.log(tmpPath);
+    fs.writeFileSync(tmpPath, data);
+
+    const format: ffmpeg.FfprobeFormat = await new Promise((resolve, reject) => {
+      ffmpeg.ffprobe(tmpPath, (err, metadata) => {
+        if (err) {
+          reject(err);
+        }
+        resolve(metadata.format);
+      });
+    });
+    console.log(format);
 
     targetItem = item;
     break;

@@ -11,7 +11,10 @@ export const bulkPostTweet = functions.region('asia-northeast1').https.onRequest
   response.send('SUCCESS!');
 });
 
-export const tweetAvMovieTest = functions.region('asia-northeast1').https.onRequest(async (request, response) => {
-  await tweetAvMovie();
-  response.send('SUCCESS!');
-});
+export const tweetAvMovieTest = functions
+  .region('asia-northeast1')
+  .runWith({ timeoutSeconds: 540 })
+  .https.onRequest(async (request, response) => {
+    await tweetAvMovie();
+    response.send('SUCCESS!');
+  });
