@@ -13,7 +13,7 @@ import * as ffprobe_static from 'ffprobe-static';
 ffmpeg.setFfmpegPath(ffmpeg_static);
 ffmpeg.setFfprobePath(ffprobe_static.path);
 
-import { DMMApiClient, ItemType, ItemGenreType } from './DMMApiClient';
+import { DMMApiClient, ItemType } from './DMMApiClient';
 
 const ref = admin
   .firestore()
@@ -27,7 +27,10 @@ const ACCESS_TOKEN_KEY = TWITTER_ENV.av_video_bot_access_token_key;
 const ACCESS_TOKEN_SECRET = TWITTER_ENV.av_video_bot_access_token_secret;
 
 export const tweetAvMovie = async () => {
-  const item = await getTargetItem();
+  const target = await getTargetItem();
+  const mediaId = await uploadTwitterMedia(target);
+  const { item } = target;
+  const result = await postTweet({ status: `${item.title}`, mediaIds: [mediaId] });
 };
 
 const getTargetItem = async () => {
@@ -38,7 +41,11 @@ const getTargetItem = async () => {
     },
   } = response;
 
+  const _15MB = 1048576 * 15;
   let targetItem;
+  let tmpPath = '';
+  let mediaType = '';
+  let totalBytes = '';
   for (const item of items) {
     const { content_id, sampleMovieURL } = item;
     if (!sampleMovieURL) {
@@ -57,13 +64,17 @@ const getTargetItem = async () => {
     const videoResponse = await axios.get(url, { responseType: 'arraybuffer' });
 
     const { headers, data } = videoResponse;
-    console.log(headers);
-    const media_type = headers['content-type'];
-    const total_bytes = headers['content-length'];
+    mediaType = headers['content-type'];
+    totalBytes = headers['content-length'];
+    console.log(totalBytes);
+
+    if (Number(totalBytes) > _15MB) {
+      continue;
+    }
 
     const fileName = `av_movie_bot${path.extname(url)}`;
-    const tmpPath = path.join(os.tmpdir(), fileName);
-    console.log(tmpPath);
+    tmpPath = path.join('./', fileName);
+    // tmpPath = path.join(os.tmpdir(), fileName);
     fs.writeFileSync(tmpPath, data);
 
     const format: ffmpeg.FfprobeFormat = await new Promise((resolve, reject) => {
@@ -74,18 +85,24 @@ const getTargetItem = async () => {
         resolve(metadata.format);
       });
     });
-    console.log(format);
+
+    const { duration } = format;
+    if (!duration || duration > 140) {
+      continue;
+    }
 
     targetItem = item;
     break;
   }
-  return targetItem as ItemType;
+
+  return { item: targetItem as ItemType, filePath: tmpPath, mediaType, totalBytes };
 };
 
 const getMoviewUrl = async (targetUrl: string) => {
   const browser = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    devtools: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--autoplay-policy=no-user-gesture-required'],
   });
 
   const page = await browser.newPage();
@@ -95,15 +112,127 @@ const getMoviewUrl = async (targetUrl: string) => {
   if (!elementHandle) {
     return null;
   }
-  const frame = await elementHandle.contentFrame();
-  if (!frame) {
-    return null;
+
+  const iframeUrl = (await (await elementHandle.getProperty('src')).jsonValue()) as string;
+  await page.goto(iframeUrl);
+
+  await page.waitForSelector('.modal-overlay');
+  await page.evaluate(() => {
+    const doms = document.querySelectorAll<HTMLElement>('.modal-overlay');
+    doms.forEach((ele, index) => {
+      console.log(`modal: ${index + 1}`);
+      ele.style.display = 'none';
+    });
+  });
+
+  const playButton = await page.$('.dgm-btn-playerCover');
+  if (playButton) {
+    console.log('playButton FOUND');
+    await playButton.click();
   }
-  const videoElementHandle = await frame.$('video');
+
+  const pauseSelectot = '.playpause';
+  await page.waitForSelector(pauseSelectot);
+  const pauseButton = await page.$(pauseSelectot);
+  if (pauseButton) {
+    console.log('pauseButton FOUND');
+    await pauseButton.click();
+  }
+
+  await page.evaluate(() => {
+    const ele = document.querySelector<HTMLElement>('.box-bitrate');
+    if (ele) {
+      ele.style.display = 'block';
+    }
+  });
+
+  const targetXpath = "//a[contains(text(), '1000kbps')]";
+  await page.waitForXPath(targetXpath);
+  const [target] = await page.$x(targetXpath);
+  if (target) {
+    const text = (await (await target.getProperty('textContent')).jsonValue()) as string;
+    console.log(text);
+    await target.click();
+  }
+  const videoElementHandle = await page.$('video');
   if (!videoElementHandle) {
     return null;
   }
   const url = (await (await videoElementHandle.getProperty('src')).jsonValue()) as string;
   await browser.close();
   return url;
+};
+
+const uploadTwitterMedia = async ({
+  filePath,
+  mediaType,
+  totalBytes,
+}: {
+  filePath: string;
+  mediaType: string;
+  totalBytes: string;
+}) => {
+  const client = new Twitter({
+    consumer_key: CONSUMER_KEY,
+    consumer_secret: CONSUMER_SECRET,
+    access_token_key: ACCESS_TOKEN_KEY,
+    access_token_secret: ACCESS_TOKEN_SECRET,
+  });
+
+  const initResponse = await client.post('media/upload', {
+    command: 'INIT',
+    total_bytes: totalBytes,
+    media_type: mediaType,
+    media_category: 'tweet_video',
+  });
+  const mediaId = initResponse['media_id_string'];
+  console.log('mediaId:', mediaId);
+
+  const _5MB = 1048576 * 5;
+  let segmentIndex = -1;
+  const stream = fs.createReadStream(filePath, { highWaterMark: _5MB });
+
+  stream.on('data', async chunk => {
+    segmentIndex += 1;
+    console.log(segmentIndex);
+    await client.post('media/upload', {
+      command: 'APPEND',
+      media_id: mediaId,
+      segment_index: segmentIndex,
+      media_data: chunk,
+    });
+  });
+
+  await new Promise((resolve, reject) => {
+    stream.on('end', () => {
+      resolve();
+    });
+    stream.on('error', err => {
+      reject(err);
+    });
+  });
+  console.log('APPEND END');
+
+  const finalizeResponse = await client.post('media/upload', {
+    command: 'FINALIZE',
+    media_id: mediaId,
+  });
+  console.log(finalizeResponse);
+  console.log('FINALIZE END');
+
+  return mediaId;
+};
+
+const postTweet = async ({ status, mediaIds = [] }: { status: string; mediaIds?: string[] }) => {
+  const client = new Twitter({
+    consumer_key: CONSUMER_KEY,
+    consumer_secret: CONSUMER_SECRET,
+    access_token_key: ACCESS_TOKEN_KEY,
+    access_token_secret: ACCESS_TOKEN_SECRET,
+  });
+  const params = {
+    status,
+    media_ids: mediaIds.join(','),
+  };
+  return await client.post('statuses/update', params);
 };

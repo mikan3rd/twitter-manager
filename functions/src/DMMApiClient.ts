@@ -44,6 +44,9 @@ export type ItemType = {
   };
   sampleMovieURL?: {
     size_720_480: string;
+    size_644_414: string;
+    size_560_360: string;
+    size_476_306: string;
   };
   prices: {};
   date: string;
