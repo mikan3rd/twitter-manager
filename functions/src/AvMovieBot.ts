@@ -34,6 +34,9 @@ export const tweetAvMovie = async () => {
 };
 
 const getTargetItem = async () => {
+  const doc = await ref.get();
+  let selecteContendIds: number[] = doc.data()?.selecteContendIds || [];
+
   const response = await DMMApiClient.getItemList({ offset: 1 });
   const {
     data: {
@@ -45,7 +48,7 @@ const getTargetItem = async () => {
   let targetItem;
   let tmpPath = '';
   let mediaType = '';
-  let totalBytes = '';
+  let totalBytes = 0;
   for (const item of items) {
     const { content_id, sampleMovieURL } = item;
     if (!sampleMovieURL) {
@@ -57,6 +60,7 @@ const getTargetItem = async () => {
 
     const url = await getMoviewUrl(size_720_480);
     if (!url) {
+      selecteContendIds = selecteContendIds.concat([Number(content_id)]);
       continue;
     }
     console.log(url);
@@ -65,16 +69,16 @@ const getTargetItem = async () => {
 
     const { headers, data } = videoResponse;
     mediaType = headers['content-type'];
-    totalBytes = headers['content-length'];
+    totalBytes = Number(headers['content-length']);
     console.log(totalBytes);
 
     if (Number(totalBytes) > _15MB) {
+      selecteContendIds = selecteContendIds.concat([Number(content_id)]);
       continue;
     }
 
     const fileName = `av_movie_bot${path.extname(url)}`;
-    tmpPath = path.join('./', fileName);
-    // tmpPath = path.join(os.tmpdir(), fileName);
+    tmpPath = path.join(os.tmpdir(), fileName);
     fs.writeFileSync(tmpPath, data);
 
     const format: ffmpeg.FfprobeFormat = await new Promise((resolve, reject) => {
@@ -88,6 +92,7 @@ const getTargetItem = async () => {
 
     const { duration } = format;
     if (!duration || duration > 140) {
+      selecteContendIds = selecteContendIds.concat([Number(content_id)]);
       continue;
     }
 
@@ -95,6 +100,11 @@ const getTargetItem = async () => {
     break;
   }
 
+  if (targetItem) {
+    selecteContendIds = selecteContendIds.concat([Number(targetItem.content_id)]);
+  }
+
+  await ref.set({ selecteContendIds }, { merge: true });
   return { item: targetItem as ItemType, filePath: tmpPath, mediaType, totalBytes };
 };
 
@@ -127,7 +137,6 @@ const getMoviewUrl = async (targetUrl: string) => {
 
   const playButton = await page.$('.dgm-btn-playerCover');
   if (playButton) {
-    console.log('playButton FOUND');
     await playButton.click();
   }
 
@@ -135,7 +144,6 @@ const getMoviewUrl = async (targetUrl: string) => {
   await page.waitForSelector(pauseSelectot);
   const pauseButton = await page.$(pauseSelectot);
   if (pauseButton) {
-    console.log('pauseButton FOUND');
     await pauseButton.click();
   }
 
@@ -150,8 +158,6 @@ const getMoviewUrl = async (targetUrl: string) => {
   await page.waitForXPath(targetXpath);
   const [target] = await page.$x(targetXpath);
   if (target) {
-    const text = (await (await target.getProperty('textContent')).jsonValue()) as string;
-    console.log(text);
     await target.click();
   }
   const videoElementHandle = await page.$('video');
@@ -170,7 +176,7 @@ const uploadTwitterMedia = async ({
 }: {
   filePath: string;
   mediaType: string;
-  totalBytes: string;
+  totalBytes: number;
 }) => {
   const client = new Twitter({
     consumer_key: CONSUMER_KEY,
@@ -188,37 +194,46 @@ const uploadTwitterMedia = async ({
   const mediaId = initResponse['media_id_string'];
   console.log('mediaId:', mediaId);
 
-  const _5MB = 1048576 * 5;
-  let segmentIndex = -1;
-  const stream = fs.createReadStream(filePath, { highWaterMark: _5MB });
-
-  stream.on('data', async chunk => {
-    segmentIndex += 1;
-    console.log(segmentIndex);
+  const mediaData = fs.readFileSync(filePath);
+  const chunkSize = 1048576 * 5;
+  const chunkNum = Math.ceil(totalBytes / chunkSize);
+  for (let index = 0; index < chunkNum; index++) {
+    console.log(index);
+    const chunk = mediaData.slice(chunkSize * index, chunkSize * (index + 1));
     await client.post('media/upload', {
       command: 'APPEND',
       media_id: mediaId,
-      segment_index: segmentIndex,
-      media_data: chunk,
+      media: chunk,
+      segment_index: index,
     });
-  });
-
-  await new Promise((resolve, reject) => {
-    stream.on('end', () => {
-      resolve();
-    });
-    stream.on('error', err => {
-      reject(err);
-    });
-  });
+  }
   console.log('APPEND END');
 
-  const finalizeResponse = await client.post('media/upload', {
+  await client.post('media/upload', {
     command: 'FINALIZE',
     media_id: mediaId,
   });
-  console.log(finalizeResponse);
   console.log('FINALIZE END');
+
+  while (true) {
+    const statusResponse = await client.get('media/upload', {
+      command: 'STATUS',
+      media_id: mediaId,
+    });
+    const {
+      processing_info: { state, check_after_secs, progress_percent, error },
+    } = statusResponse;
+    console.log(`${state}:`, `${progress_percent}%`, `${check_after_secs || 0}secs`);
+    if (state === 'succeeded') {
+      break;
+    }
+    if (state === 'failed') {
+      throw new Error(error);
+    }
+    await new Promise(resolve => setTimeout(resolve, 1000 * (check_after_secs + 5)));
+  }
+
+  fs.unlinkSync(filePath);
 
   return mediaId;
 };
