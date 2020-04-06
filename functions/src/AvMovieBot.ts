@@ -37,72 +37,81 @@ const getTargetItem = async () => {
   const doc = await ref.get();
   let selecteContendIds: string[] = doc.data()?.selecteContendIds || [];
 
-  const response = await DMMApiClient.getItemList({ offset: 1 });
-  const {
-    data: {
-      result: { items },
-    },
-  } = response;
-
+  const LIMIT = 10;
   const _15MB = 1048576 * 15;
   let targetItem;
   let tmpPath = '';
   let mediaType = '';
   let totalBytes = 0;
-  for (const item of items) {
-    const { content_id, sampleMovieURL } = item;
-    if (selecteContendIds.includes(content_id)) {
-      continue;
-    }
-    if (!sampleMovieURL) {
-      continue;
-    }
-    const { size_720_480 } = sampleMovieURL;
 
-    const url = await getMoviewUrl(size_720_480);
-    if (!url) {
-      selecteContendIds = selecteContendIds.concat([content_id]);
-      continue;
-    }
+  for (const i of Array(LIMIT).keys()) {
+    console.log(`${i + 1} / ${LIMIT}`);
+    const response = await DMMApiClient.getItemList({ offset: i * 100 + 1 });
+    const {
+      data: {
+        result: { items },
+      },
+    } = response;
+    for (const item of items) {
+      const { content_id, sampleMovieURL } = item;
+      if (selecteContendIds.includes(content_id)) {
+        continue;
+      }
+      if (!sampleMovieURL) {
+        continue;
+      }
+      const { size_720_480 } = sampleMovieURL;
 
-    const videoResponse = await axios.get(url, { responseType: 'arraybuffer' });
+      const url = await getMoviewUrl(size_720_480);
+      if (!url) {
+        selecteContendIds = selecteContendIds.concat([content_id]);
+        continue;
+      }
 
-    const { headers, data } = videoResponse;
-    mediaType = headers['content-type'];
-    totalBytes = Number(headers['content-length']);
+      const videoResponse = await axios.get(url, { responseType: 'arraybuffer' });
 
-    if (Number(totalBytes) > _15MB) {
-      selecteContendIds = selecteContendIds.concat([content_id]);
-      continue;
-    }
+      const { headers, data } = videoResponse;
+      mediaType = headers['content-type'];
+      totalBytes = Number(headers['content-length']);
 
-    const fileName = `av_movie_bot${path.extname(url)}`;
-    tmpPath = path.join(os.tmpdir(), fileName);
-    fs.writeFileSync(tmpPath, data);
+      if (Number(totalBytes) > _15MB) {
+        selecteContendIds = selecteContendIds.concat([content_id]);
+        continue;
+      }
 
-    const format: ffmpeg.FfprobeFormat = await new Promise((resolve, reject) => {
-      ffmpeg.ffprobe(tmpPath, (err, metadata) => {
-        if (err) {
-          reject(err);
-        }
-        resolve(metadata.format);
+      const fileName = `av_movie_bot${path.extname(url)}`;
+      tmpPath = path.join(os.tmpdir(), fileName);
+      fs.writeFileSync(tmpPath, data);
+
+      const format: ffmpeg.FfprobeFormat = await new Promise((resolve, reject) => {
+        ffmpeg.ffprobe(tmpPath, (err, metadata) => {
+          if (err) {
+            reject(err);
+          }
+          resolve(metadata.format);
+        });
       });
-    });
 
-    const { duration } = format;
-    if (!duration || duration > 140) {
-      selecteContendIds = selecteContendIds.concat([content_id]);
-      continue;
+      const { duration } = format;
+      if (!duration || duration > 140) {
+        selecteContendIds = selecteContendIds.concat([content_id]);
+        continue;
+      }
+
+      targetItem = item;
+      break;
     }
-
-    targetItem = item;
-    break;
+    if (targetItem) {
+      break;
+    }
   }
 
   if (targetItem) {
     selecteContendIds = selecteContendIds.concat([targetItem.content_id]);
     console.log(targetItem.sampleMovieURL?.size_720_480);
   }
+
+  console.log('selecteContendIds:', selecteContendIds.length);
 
   await ref.set({ selecteContendIds }, { merge: true });
   return { item: targetItem as ItemType, filePath: tmpPath, mediaType, totalBytes };

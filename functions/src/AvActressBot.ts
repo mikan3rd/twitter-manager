@@ -77,7 +77,7 @@ const getTargetActress = async () => {
   }
 
   selectedActressIds = selectedActressIds.concat([Number(targetActress.id)]);
-  console.log(targetActress);
+  console.log(targetActress.id, targetActress.name);
   console.log('selectedActressIds:', selectedActressIds.length);
 
   await ref.set({ selectedActressIds }, { merge: true });
