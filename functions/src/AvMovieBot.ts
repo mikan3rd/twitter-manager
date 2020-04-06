@@ -21,10 +21,10 @@ const ref = admin
   .doc('av_movie_bot');
 
 const TWITTER_ENV = functions.config().twitter;
-const CONSUMER_KEY = TWITTER_ENV.av_video_bot_consumer_key;
-const CONSUMER_SECRET = TWITTER_ENV.av_video_bot_consumer_secret;
-const ACCESS_TOKEN_KEY = TWITTER_ENV.av_video_bot_access_token_key;
-const ACCESS_TOKEN_SECRET = TWITTER_ENV.av_video_bot_access_token_secret;
+const CONSUMER_KEY = TWITTER_ENV.ero_video_bot_consumer_key;
+const CONSUMER_SECRET = TWITTER_ENV.ero_video_bot_consumer_secret;
+const ACCESS_TOKEN_KEY = TWITTER_ENV.ero_video_bot_access_token_key;
+const ACCESS_TOKEN_SECRET = TWITTER_ENV.ero_video_bot_access_token_secret;
 
 export const tweetAvMovie = async () => {
   const target = await getTargetItem();
@@ -35,7 +35,7 @@ export const tweetAvMovie = async () => {
 
 const getTargetItem = async () => {
   const doc = await ref.get();
-  let selecteContendIds: number[] = doc.data()?.selecteContendIds || [];
+  let selecteContendIds: string[] = doc.data()?.selecteContendIds || [];
 
   const response = await DMMApiClient.getItemList({ offset: 1 });
   const {
@@ -51,29 +51,28 @@ const getTargetItem = async () => {
   let totalBytes = 0;
   for (const item of items) {
     const { content_id, sampleMovieURL } = item;
+    if (selecteContendIds.includes(content_id)) {
+      continue;
+    }
     if (!sampleMovieURL) {
       continue;
     }
     const { size_720_480 } = sampleMovieURL;
-    console.log('content_id:', content_id);
-    console.log(size_720_480);
 
     const url = await getMoviewUrl(size_720_480);
     if (!url) {
-      selecteContendIds = selecteContendIds.concat([Number(content_id)]);
+      selecteContendIds = selecteContendIds.concat([content_id]);
       continue;
     }
-    console.log(url);
 
     const videoResponse = await axios.get(url, { responseType: 'arraybuffer' });
 
     const { headers, data } = videoResponse;
     mediaType = headers['content-type'];
     totalBytes = Number(headers['content-length']);
-    console.log(totalBytes);
 
     if (Number(totalBytes) > _15MB) {
-      selecteContendIds = selecteContendIds.concat([Number(content_id)]);
+      selecteContendIds = selecteContendIds.concat([content_id]);
       continue;
     }
 
@@ -92,7 +91,7 @@ const getTargetItem = async () => {
 
     const { duration } = format;
     if (!duration || duration > 140) {
-      selecteContendIds = selecteContendIds.concat([Number(content_id)]);
+      selecteContendIds = selecteContendIds.concat([content_id]);
       continue;
     }
 
@@ -101,7 +100,8 @@ const getTargetItem = async () => {
   }
 
   if (targetItem) {
-    selecteContendIds = selecteContendIds.concat([Number(targetItem.content_id)]);
+    selecteContendIds = selecteContendIds.concat([targetItem.content_id]);
+    console.log(targetItem.sampleMovieURL?.size_720_480);
   }
 
   await ref.set({ selecteContendIds }, { merge: true });
@@ -192,13 +192,11 @@ const uploadTwitterMedia = async ({
     media_category: 'tweet_video',
   });
   const mediaId = initResponse['media_id_string'];
-  console.log('mediaId:', mediaId);
 
   const mediaData = fs.readFileSync(filePath);
   const chunkSize = 1048576 * 5;
   const chunkNum = Math.ceil(totalBytes / chunkSize);
   for (let index = 0; index < chunkNum; index++) {
-    console.log(index);
     const chunk = mediaData.slice(chunkSize * index, chunkSize * (index + 1));
     await client.post('media/upload', {
       command: 'APPEND',
@@ -207,13 +205,11 @@ const uploadTwitterMedia = async ({
       segment_index: index,
     });
   }
-  console.log('APPEND END');
 
   await client.post('media/upload', {
     command: 'FINALIZE',
     media_id: mediaId,
   });
-  console.log('FINALIZE END');
 
   while (true) {
     const statusResponse = await client.get('media/upload', {
@@ -223,7 +219,6 @@ const uploadTwitterMedia = async ({
     const {
       processing_info: { state, check_after_secs, progress_percent, error },
     } = statusResponse;
-    console.log(`${state}:`, `${progress_percent}%`, `${check_after_secs || 0}secs`);
     if (state === 'succeeded') {
       break;
     }
