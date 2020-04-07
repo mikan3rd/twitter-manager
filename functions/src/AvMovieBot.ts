@@ -73,6 +73,7 @@ const getTargetItem = async () => {
       const { headers, data } = videoResponse;
       mediaType = headers['content-type'];
       totalBytes = Number(headers['content-length']);
+      console.log('totalBytes:', totalBytes);
 
       if (Number(totalBytes) > _15MB) {
         selecteContendIds = selecteContendIds.concat([content_id]);
@@ -108,6 +109,7 @@ const getTargetItem = async () => {
 
   if (targetItem) {
     selecteContendIds = selecteContendIds.concat([targetItem.content_id]);
+    console.log('content_id:', targetItem.content_id);
     console.log(targetItem.sampleMovieURL?.size_720_480);
   }
 
@@ -262,7 +264,7 @@ const getAvMovieStatus = (item: ItemType) => {
   let genreContentList: string[] = [];
   if (genre) {
     const genreList = genre.map(target => `#${target.name}`);
-    actressContentList = ['', '【ジャンル】', ...genreList];
+    genreContentList = ['', '【ジャンル】', ...genreList];
   }
 
   let status = '';
