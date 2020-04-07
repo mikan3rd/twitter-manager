@@ -250,10 +250,17 @@ const getAvMovieStatus = (item: ItemType) => {
   const {
     title,
     affiliateURL,
-    iteminfo: { actress, genre },
+    iteminfo: { actress, genre, series },
   } = item;
-  const mainContentList = [title];
+
+  const mainContentList = ['', title];
   const linkContentList = ['', `【この動画の詳細はコチラ！】`, affiliateURL];
+
+  let seriesContentList: string[] = [];
+  if (series) {
+    const seriesList = series.map(target => target.name);
+    seriesContentList = seriesContentList.concat(['', '【シリーズ】', ...seriesList]);
+  }
 
   let actressContentList: string[] = [];
   if (actress) {
@@ -269,7 +276,10 @@ const getAvMovieStatus = (item: ItemType) => {
 
   let status = '';
   while (true) {
-    status = mainContentList.concat([...actressContentList, ...genreContentList, ...linkContentList]).join('\n');
+    status = mainContentList
+      .concat([...seriesContentList, ...actressContentList, ...genreContentList, ...linkContentList])
+      .join('\n');
+
     if (status.length < 280) {
       break;
     }
@@ -285,6 +295,12 @@ const getAvMovieStatus = (item: ItemType) => {
         actressContentList = [];
       } else {
         actressContentList.pop();
+      }
+    } else if (seriesContentList.length > 0) {
+      if (seriesContentList.length <= 3) {
+        seriesContentList = [];
+      } else {
+        seriesContentList.pop();
       }
     } else {
       throw new Error('status length too long...');

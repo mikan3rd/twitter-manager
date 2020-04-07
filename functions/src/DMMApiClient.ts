@@ -50,7 +50,11 @@ export type ItemType = {
   };
   prices: {};
   date: string;
-  iteminfo: { actress: ItemActressType[]; genre: ItemGenreType[] };
+  iteminfo: {
+    actress?: ItemActressType[];
+    genre?: ItemGenreType[];
+    series?: { id: number; name: string }[];
+  };
 };
 
 export type ItemActressType = { id: number; name: string; ruby: string };

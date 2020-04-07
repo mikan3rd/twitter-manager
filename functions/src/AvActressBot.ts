@@ -44,7 +44,9 @@ const getTargetActress = async () => {
       },
     } = itemResponse;
 
-    const actressNestedList = items.map(item => item.iteminfo.actress);
+    const actressNestedList = items
+      .filter(item => item.iteminfo.actress)
+      .map(item => item.iteminfo.actress as ItemActressType[]);
     const actressList = ([] as ItemActressType[]).concat(...actressNestedList);
 
     for (const tmpActress of actressList) {
@@ -138,7 +140,9 @@ const getAvPackageStatus = (actressInfo: ActressType, actressItems: ItemType[]) 
   }
   mainContentList = mainContentList.concat(['']);
   const linkContentList = ['', '【この女優の動画はコチラ！】', actressInfo['listURL']['digital']];
-  const nestedGenreList = actressItems.map(item => item.iteminfo.genre);
+  const nestedGenreList = actressItems
+    .filter(item => item.iteminfo.genre)
+    .map(item => item.iteminfo.genre as ItemGenreType[]);
 
   // TODO: ナカグロで分ける
   const genreList = ([] as ItemGenreType[]).concat(...nestedGenreList);
