@@ -29,8 +29,8 @@ const ACCESS_TOKEN_SECRET = TWITTER_ENV.ero_video_bot_access_token_secret;
 export const tweetAvMovie = async () => {
   const target = await getTargetItem();
   const mediaId = await uploadTwitterMedia(target);
-  const { item } = target;
-  const result = await postTweet({ status: `${item.title}`, mediaIds: [mediaId] });
+  const status = getAvMovieStatus(target.item);
+  const result = await postTweet({ status, mediaIds: [mediaId] });
 };
 
 const getTargetItem = async () => {
@@ -144,14 +144,16 @@ const getMoviewUrl = async (targetUrl: string) => {
     });
   });
 
-  const playButton = await page.$('.dgm-btn-playerCover');
+  const playerSelector = '.dgm-btn-playerCover';
+  await page.waitForSelector(playerSelector);
+  const playButton = await page.$(playerSelector);
   if (playButton) {
     await playButton.click();
   }
 
-  const pauseSelectot = '.playpause';
-  await page.waitForSelector(pauseSelectot);
-  const pauseButton = await page.$(pauseSelectot);
+  const pauseSelector = '.playpause';
+  await page.waitForSelector(pauseSelector);
+  const pauseButton = await page.$(pauseSelector);
   if (pauseButton) {
     await pauseButton.click();
   }
@@ -203,10 +205,10 @@ const uploadTwitterMedia = async ({
   const mediaId = initResponse['media_id_string'];
 
   const mediaData = fs.readFileSync(filePath);
-  const chunkSize = 1048576 * 5;
-  const chunkNum = Math.ceil(totalBytes / chunkSize);
+  const _5MB = 1048576 * 5;
+  const chunkNum = Math.ceil(totalBytes / _5MB);
   for (let index = 0; index < chunkNum; index++) {
-    const chunk = mediaData.slice(chunkSize * index, chunkSize * (index + 1));
+    const chunk = mediaData.slice(_5MB * index, _5MB * (index + 1));
     await client.post('media/upload', {
       command: 'APPEND',
       media_id: mediaId,
@@ -240,6 +242,54 @@ const uploadTwitterMedia = async ({
   fs.unlinkSync(filePath);
 
   return mediaId;
+};
+
+const getAvMovieStatus = (item: ItemType) => {
+  const {
+    title,
+    affiliateURL,
+    iteminfo: { actress, genre },
+  } = item;
+  const mainContentList = [title];
+  const linkContentList = ['', `【この動画の詳細はコチラ！】`, affiliateURL];
+
+  let actressContentList: string[] = [];
+  if (actress) {
+    const acressList = actress.map(target => `#${target.name}`);
+    actressContentList = ['', '【女優】', ...acressList];
+  }
+
+  let genreContentList: string[] = [];
+  if (genre) {
+    const genreList = genre.map(target => `#${target.name}`);
+    actressContentList = ['', '【ジャンル】', ...genreList];
+  }
+
+  let status = '';
+  while (true) {
+    status = mainContentList.concat([...actressContentList, ...genreContentList, ...linkContentList]).join('\n');
+    if (status.length < 280) {
+      break;
+    }
+
+    if (genreContentList.length > 0) {
+      if (genreContentList.length <= 3) {
+        genreContentList = [];
+      } else {
+        genreContentList.pop();
+      }
+    } else if (actressContentList.length > 0) {
+      if (actressContentList.length <= 3) {
+        actressContentList = [];
+      } else {
+        actressContentList.pop();
+      }
+    } else {
+      throw new Error('status length too long...');
+    }
+  }
+
+  return status;
 };
 
 const postTweet = async ({ status, mediaIds = [] }: { status: string; mediaIds?: string[] }) => {

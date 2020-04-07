@@ -139,6 +139,8 @@ const getAvPackageStatus = (actressInfo: ActressType, actressItems: ItemType[]) 
   mainContentList = mainContentList.concat(['']);
   const linkContentList = ['', '【この女優の動画はコチラ！】', actressInfo['listURL']['digital']];
   const nestedGenreList = actressItems.map(item => item.iteminfo.genre);
+
+  // TODO: ナカグロで分ける
   const genreList = ([] as ItemGenreType[]).concat(...nestedGenreList);
   const genreObject: {
     [id: number]: { genre: ItemGenreType; count: number };
