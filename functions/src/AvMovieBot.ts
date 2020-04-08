@@ -1,6 +1,4 @@
-import * as Twitter from 'twitter';
 import axios from 'axios';
-import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import * as puppeteer from 'puppeteer';
 import * as ffmpeg from 'fluent-ffmpeg';
@@ -14,17 +12,12 @@ ffmpeg.setFfmpegPath(ffmpeg_static);
 ffmpeg.setFfprobePath(ffprobe_static.path);
 
 import { DMMApiClient, ItemType } from './DMMApiClient';
+import { TwitterClient } from './TwitterClient';
 
 const ref = admin
   .firestore()
   .collection('twitter')
   .doc('av_movie_bot');
-
-const TWITTER_ENV = functions.config().twitter;
-const CONSUMER_KEY = TWITTER_ENV.ero_video_bot_consumer_key;
-const CONSUMER_SECRET = TWITTER_ENV.ero_video_bot_consumer_secret;
-const ACCESS_TOKEN_KEY = TWITTER_ENV.ero_video_bot_access_token_key;
-const ACCESS_TOKEN_SECRET = TWITTER_ENV.ero_video_bot_access_token_secret;
 
 export const tweetAvMovie = async () => {
   const target = await getTargetItem();
@@ -191,12 +184,7 @@ const uploadTwitterMedia = async ({
   mediaType: string;
   totalBytes: number;
 }) => {
-  const client = new Twitter({
-    consumer_key: CONSUMER_KEY,
-    consumer_secret: CONSUMER_SECRET,
-    access_token_key: ACCESS_TOKEN_KEY,
-    access_token_secret: ACCESS_TOKEN_SECRET,
-  });
+  const client = TwitterClient.get('ero_video_bot');
 
   const initResponse = await client.post('media/upload', {
     command: 'INIT',
@@ -323,12 +311,7 @@ const getAvMovieStatus = (item: ItemType) => {
 };
 
 const postTweet = async ({ status, mediaIds = [] }: { status: string; mediaIds?: string[] }) => {
-  const client = new Twitter({
-    consumer_key: CONSUMER_KEY,
-    consumer_secret: CONSUMER_SECRET,
-    access_token_key: ACCESS_TOKEN_KEY,
-    access_token_secret: ACCESS_TOKEN_SECRET,
-  });
+  const client = TwitterClient.get('ero_video_bot');
   const params = {
     status,
     media_ids: mediaIds.join(','),

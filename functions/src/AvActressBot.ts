@@ -1,20 +1,13 @@
-import * as Twitter from 'twitter';
 import axios from 'axios';
-import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
 import { DMMApiClient, ItemActressType, ItemType, ItemGenreType, ActressType } from './DMMApiClient';
+import { TwitterClient } from './TwitterClient';
 
 const ref = admin
   .firestore()
   .collection('twitter')
   .doc('av_actress_bot');
-
-const TWITTER_ENV = functions.config().twitter;
-const CONSUMER_KEY = TWITTER_ENV.av_video_bot_consumer_key;
-const CONSUMER_SECRET = TWITTER_ENV.av_video_bot_consumer_secret;
-const ACCESS_TOKEN_KEY = TWITTER_ENV.av_video_bot_access_token_key;
-const ACCESS_TOKEN_SECRET = TWITTER_ENV.av_video_bot_access_token_secret;
 
 export const tweetAvPackage = async () => {
   const actressInfo = await getTargetActress();
@@ -181,13 +174,7 @@ const getAvPackageStatus = (actressInfo: ActressType, actressItems: ItemType[]) 
 };
 
 const uploadImages = async (images: string[]) => {
-  const client = new Twitter({
-    consumer_key: CONSUMER_KEY,
-    consumer_secret: CONSUMER_SECRET,
-    access_token_key: ACCESS_TOKEN_KEY,
-    access_token_secret: ACCESS_TOKEN_SECRET,
-  });
-
+  const client = TwitterClient.get('av_video_bot');
   const mediaIds: string[] = [];
   for (const imageUrl of images) {
     const { data } = await axios.get(imageUrl, { responseType: 'arraybuffer' });
@@ -203,12 +190,7 @@ const uploadImages = async (images: string[]) => {
 };
 
 const postTweet = async ({ status, mediaIds = [] }: { status: string; mediaIds?: string[] }) => {
-  const client = new Twitter({
-    consumer_key: CONSUMER_KEY,
-    consumer_secret: CONSUMER_SECRET,
-    access_token_key: ACCESS_TOKEN_KEY,
-    access_token_secret: ACCESS_TOKEN_SECRET,
-  });
+  const client = TwitterClient.get('av_video_bot');
   const params = {
     status,
     media_ids: mediaIds.join(','),
