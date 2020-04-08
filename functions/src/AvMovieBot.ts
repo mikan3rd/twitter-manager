@@ -253,13 +253,17 @@ const getAvMovieStatus = (item: ItemType) => {
     iteminfo: { actress, genre, series },
   } = item;
 
-  const mainContentList = ['', title];
+  let itemTitle = title;
+
   const linkContentList = ['', `【この動画の詳細はコチラ！】`, affiliateURL];
 
   let seriesContentList: string[] = [];
   if (series) {
     const seriesList = series.map(target => target.name);
-    seriesContentList = seriesContentList.concat(['', '【シリーズ】', ...seriesList]);
+    seriesList.forEach(seriesName => {
+      itemTitle = itemTitle.replace(seriesName, '');
+    });
+    seriesContentList = seriesContentList.concat(['', ...seriesList]);
   }
 
   let actressContentList: string[] = [];
@@ -270,14 +274,21 @@ const getAvMovieStatus = (item: ItemType) => {
 
   let genreContentList: string[] = [];
   if (genre) {
-    const genreList = genre.map(target => `#${target.name}`);
+    let genreList: string[] = [];
+    genre.forEach(target => {
+      const genreNames = target.name.split('\u30fb').map(g => `#${g}`);
+      genreList = genreList.concat([...genreNames]);
+    });
     genreContentList = ['', '【ジャンル】', ...genreList];
   }
 
+  itemTitle = itemTitle.trim();
+  const mainContentList = ['', itemTitle];
+
   let status = '';
   while (true) {
-    status = mainContentList
-      .concat([...seriesContentList, ...actressContentList, ...genreContentList, ...linkContentList])
+    status = seriesContentList
+      .concat([...mainContentList, ...actressContentList, ...genreContentList, ...linkContentList])
       .join('\n');
 
     if (status.length < 280) {
@@ -307,6 +318,7 @@ const getAvMovieStatus = (item: ItemType) => {
     }
   }
 
+  console.log('status.length:', status.length);
   return status;
 };
 

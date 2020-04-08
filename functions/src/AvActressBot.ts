@@ -144,26 +144,26 @@ const getAvPackageStatus = (actressInfo: ActressType, actressItems: ItemType[]) 
     .filter(item => item.iteminfo.genre)
     .map(item => item.iteminfo.genre as ItemGenreType[]);
 
-  // TODO: ナカグロで分ける
   const genreList = ([] as ItemGenreType[]).concat(...nestedGenreList);
   const genreObject: {
-    [id: number]: { genre: ItemGenreType; count: number };
+    [name: string]: { genre: ItemGenreType; count: number };
   } = {};
   genreList.forEach(genre => {
-    if (genreObject[genre.id]) {
-      genreObject[genre.id] = {
-        genre,
-        count: genreObject[genre.id].count + 1,
-      };
+    const genreId = genre.id;
+    const target = genreObject[genreId];
+    if (target) {
+      genreObject[genreId].count = target.count + 1;
     } else {
-      genreObject[genre.id] = { genre, count: 1 };
+      genreObject[genreId] = { genre, count: 1 };
     }
   });
-  const sortedGenreList = Object.values(genreObject)
-    .sort((a, b) => (a.count > b.count ? -1 : 1))
-    .map(item => `#${item.genre.name}`);
+  const sortedGenreList = Object.values(genreObject).sort((a, b) => (a.count > b.count ? -1 : 1));
+  let hashtagList = [`#${name}`];
+  sortedGenreList.forEach(item => {
+    const genreNames = item.genre.name.split('\u30fb').map(g => `#${g}`);
+    hashtagList = hashtagList.concat([...genreNames]);
+  });
 
-  const hashtagList = [`#${name}`, ...sortedGenreList];
   let status = '';
   while (true) {
     status = mainContentList.concat([hashtagList.join(' '), ...linkContentList]).join('\n');
@@ -176,6 +176,7 @@ const getAvPackageStatus = (actressInfo: ActressType, actressItems: ItemType[]) 
       mainContentList.pop();
     }
   }
+  console.log('status.length:', status.length);
   return status;
 };
 
