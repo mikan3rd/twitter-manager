@@ -11,22 +11,25 @@ import * as ffprobe_static from 'ffprobe-static';
 ffmpeg.setFfmpegPath(ffmpeg_static);
 ffmpeg.setFfprobePath(ffprobe_static.path);
 
-import { DMMApiClient, ItemType } from './DMMApiClient';
-import { TwitterClient } from './TwitterClient';
+import { DMMApiClient, ItemType, ItemSortType } from './DMMApiClient';
+import { TwitterClient, AccountType } from './TwitterClient';
 
-const ref = admin
-  .firestore()
-  .collection('twitter')
-  .doc('av_movie_bot');
+const targetDocumentPath = 'av_movie_bot';
+const targetAccount = 'ero_video_bot';
 
 export const tweetAvMovie = async () => {
-  const target = await getTargetItem();
-  const mediaId = await uploadTwitterMedia(target);
+  const target = await getTargetItem(targetDocumentPath, 'rank');
+  const mediaId = await uploadTwitterMedia({ ...target, account: targetAccount });
   const status = getAvMovieStatus(target.item);
-  const result = await postTweet({ status, mediaIds: [mediaId] });
+  const result = await postTweet({ account: targetAccount, status, mediaIds: [mediaId] });
 };
 
-const getTargetItem = async () => {
+export const getTargetItem = async (documentPath: string, sort: ItemSortType) => {
+  const ref = admin
+    .firestore()
+    .collection('twitter')
+    .doc(documentPath);
+
   const doc = await ref.get();
   let selecteContendIds: string[] = doc.data()?.selecteContendIds || [];
 
@@ -39,7 +42,7 @@ const getTargetItem = async () => {
 
   for (const i of Array(LIMIT).keys()) {
     console.log(`${i + 1} / ${LIMIT}`);
-    const response = await DMMApiClient.getItemList({ offset: i * 100 + 1 });
+    const response = await DMMApiClient.getItemList({ offset: i * 100 + 1, sort });
     const {
       data: {
         result: { items },
@@ -73,7 +76,7 @@ const getTargetItem = async () => {
         continue;
       }
 
-      const fileName = `av_movie_bot${path.extname(url)}`;
+      const fileName = `${documentPath}${path.extname(url)}`;
       tmpPath = path.join(os.tmpdir(), fileName);
       fs.writeFileSync(tmpPath, data);
 
@@ -100,6 +103,7 @@ const getTargetItem = async () => {
     }
   }
 
+  // TODO: 取得できなかった場合に対応
   if (targetItem) {
     selecteContendIds = selecteContendIds.concat([targetItem.content_id]);
     console.log('content_id:', targetItem.content_id);
@@ -175,16 +179,18 @@ const getMoviewUrl = async (targetUrl: string) => {
   return url;
 };
 
-const uploadTwitterMedia = async ({
+export const uploadTwitterMedia = async ({
+  account,
   filePath,
   mediaType,
   totalBytes,
 }: {
+  account: AccountType;
   filePath: string;
   mediaType: string;
   totalBytes: number;
 }) => {
-  const client = TwitterClient.get('ero_video_bot');
+  const client = TwitterClient.get(account);
 
   const initResponse = await client.post('media/upload', {
     command: 'INIT',
@@ -224,7 +230,7 @@ const uploadTwitterMedia = async ({
       break;
     }
     if (state === 'failed') {
-      throw new Error(error);
+      throw new Error(String(error));
     }
     await new Promise(resolve => setTimeout(resolve, 1000 * (check_after_secs + 5)));
   }
@@ -234,7 +240,7 @@ const uploadTwitterMedia = async ({
   return mediaId;
 };
 
-const getAvMovieStatus = (item: ItemType) => {
+export const getAvMovieStatus = (item: ItemType) => {
   const {
     title,
     affiliateURL,
@@ -245,14 +251,14 @@ const getAvMovieStatus = (item: ItemType) => {
 
   const linkContentList = ['', `【この動画の詳細はコチラ！】`, affiliateURL];
 
-  let seriesContentList: string[] = [];
-  if (series) {
-    const seriesList = series.map(target => target.name);
-    seriesList.forEach(seriesName => {
-      itemTitle = itemTitle.replace(seriesName, '');
-    });
-    seriesContentList = seriesContentList.concat(['', ...seriesList]);
-  }
+  // let seriesContentList: string[] = [];
+  // if (series) {
+  //   const seriesList = series.map(target => target.name);
+  //   seriesList.forEach(seriesName => {
+  //     itemTitle = itemTitle.replace(seriesName, '');
+  //   });
+  //   seriesContentList = seriesContentList.concat(['', ...seriesList]);
+  // }
 
   let actressContentList: string[] = [];
   if (actress) {
@@ -270,16 +276,16 @@ const getAvMovieStatus = (item: ItemType) => {
     genreContentList = ['', '【ジャンル】', ...genreList];
   }
 
+  // TODO: 発売日
+
   itemTitle = itemTitle.trim();
-  const mainContentList = ['', itemTitle];
+  let mainContentList = [itemTitle];
 
   let status = '';
   while (true) {
-    status = seriesContentList
-      .concat([...mainContentList, ...actressContentList, ...genreContentList, ...linkContentList])
-      .join('\n');
+    status = mainContentList.concat([...actressContentList, ...genreContentList, ...linkContentList]).join('\n');
 
-    if (status.length < 280) {
+    if (status.length < 278) {
       break;
     }
 
@@ -295,14 +301,13 @@ const getAvMovieStatus = (item: ItemType) => {
       } else {
         actressContentList.pop();
       }
-    } else if (seriesContentList.length > 0) {
-      if (seriesContentList.length <= 3) {
-        seriesContentList = [];
-      } else {
-        seriesContentList.pop();
-      }
     } else {
-      throw new Error('status length too long...');
+      const overNum = status.length - 275;
+      if (overNum <= 0) {
+        throw new Error('overNum is invalid');
+      }
+      itemTitle = itemTitle.slice(0, overNum * -1) + '...';
+      mainContentList = [itemTitle];
     }
   }
 
@@ -310,8 +315,16 @@ const getAvMovieStatus = (item: ItemType) => {
   return status;
 };
 
-const postTweet = async ({ status, mediaIds = [] }: { status: string; mediaIds?: string[] }) => {
-  const client = TwitterClient.get('ero_video_bot');
+export const postTweet = async ({
+  account,
+  status,
+  mediaIds = [],
+}: {
+  account: AccountType;
+  status: string;
+  mediaIds?: string[];
+}) => {
+  const client = TwitterClient.get(account);
   const params = {
     status,
     media_ids: mediaIds.join(','),

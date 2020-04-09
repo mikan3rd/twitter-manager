@@ -160,7 +160,7 @@ const getAvPackageStatus = (actressInfo: ActressType, actressItems: ItemType[]) 
   let status = '';
   while (true) {
     status = mainContentList.concat([hashtagList.join(' '), ...linkContentList]).join('\n');
-    if (status.length < 280) {
+    if (status.length < 278) {
       break;
     }
     if (hashtagList.length > 0) {

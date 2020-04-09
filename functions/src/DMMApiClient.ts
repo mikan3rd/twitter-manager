@@ -96,6 +96,8 @@ export type ActressType = {
   };
 };
 
+export type ItemSortType = 'rank' | 'date' | 'price' | '-price' | 'review' | 'match';
+
 export class DMMApiClient {
   static async getItemList({
     site = 'FANZA',
@@ -111,7 +113,7 @@ export class DMMApiClient {
     site?: 'FANZA' | 'DMM.com';
     service?: string;
     floor?: string;
-    sort?: string;
+    sort?: ItemSortType;
     keyword?: string | null;
     article?: string | null;
     articleId?: number | null;
