@@ -1,4 +1,3 @@
-import axios from 'axios';
 import * as admin from 'firebase-admin';
 
 import { DMMApiClient, ItemActressType, ItemType, ItemGenreType, ActressType } from './DMMApiClient';
@@ -14,8 +13,10 @@ export const tweetAvPackage = async () => {
   const actressItems = await getActressItems(Number(actressInfo.id));
   const status = getAvPackageStatus(actressInfo, actressItems);
   const images = actressItems.map(item => item['imageURL']['large']);
-  const mediaIds = await uploadImages(images);
-  const result = await postTweet({ status, mediaIds });
+
+  const client = TwitterClient.get('av_video_bot');
+  const mediaIds = await client.uploadImages(images);
+  const result = await client.postTweet({ status, mediaIds });
 };
 
 const getTargetActress = async () => {
@@ -169,31 +170,5 @@ const getAvPackageStatus = (actressInfo: ActressType, actressItems: ItemType[]) 
       mainContentList.pop();
     }
   }
-  console.log('status.length:', status.length);
   return status;
-};
-
-const uploadImages = async (images: string[]) => {
-  const client = TwitterClient.get('av_video_bot');
-  const mediaIds: string[] = [];
-  for (const imageUrl of images) {
-    const { data } = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-    const { media_id_string } = await client.post('media/upload', {
-      media: data,
-    });
-    mediaIds.push(media_id_string);
-    if (mediaIds.length >= 4) {
-      break;
-    }
-  }
-  return mediaIds;
-};
-
-const postTweet = async ({ status, mediaIds = [] }: { status: string; mediaIds?: string[] }) => {
-  const client = TwitterClient.get('av_video_bot');
-  const params = {
-    status,
-    media_ids: mediaIds.join(','),
-  };
-  return await client.post('statuses/update', params);
 };

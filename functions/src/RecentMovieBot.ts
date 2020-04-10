@@ -1,11 +1,15 @@
-import { getTargetItem, uploadTwitterMedia, getAvMovieStatus, postTweet } from './AvMovieBot';
+import { getTargetItem, uploadTwitterMedia, getAvMovieStatus } from './AvMovieBot';
+import { TwitterClient } from './TwitterClient';
 
 const targetDocumentPath = 'recent_av_bot';
 const targetAccount = 'recent_av_bot';
 
 export const tweetRecentMovie = async () => {
   const target = await getTargetItem(targetDocumentPath, 'date');
-  const mediaId = await uploadTwitterMedia({ ...target, account: targetAccount });
-  const status = getAvMovieStatus(target.item);
-  const result = await postTweet({ account: targetAccount, status, mediaIds: [mediaId] });
+  const { item, filePath, mediaType, totalBytes } = target;
+  const status = getAvMovieStatus(item);
+
+  const client = TwitterClient.get(targetAccount);
+  const mediaId = await uploadTwitterMedia(client, filePath, mediaType, totalBytes);
+  const result = await client.postTweet({ status, mediaIds: [mediaId] });
 };

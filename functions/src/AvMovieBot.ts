@@ -12,16 +12,19 @@ ffmpeg.setFfmpegPath(ffmpeg_static);
 ffmpeg.setFfprobePath(ffprobe_static.path);
 
 import { DMMApiClient, ItemType, ItemSortType } from './DMMApiClient';
-import { TwitterClient, AccountType } from './TwitterClient';
+import { TwitterClient } from './TwitterClient';
 
 const targetDocumentPath = 'av_movie_bot';
 const targetAccount = 'ero_video_bot';
 
 export const tweetAvMovie = async () => {
   const target = await getTargetItem(targetDocumentPath, 'rank');
-  const mediaId = await uploadTwitterMedia({ ...target, account: targetAccount });
-  const status = getAvMovieStatus(target.item);
-  const result = await postTweet({ account: targetAccount, status, mediaIds: [mediaId] });
+  const { item, filePath, mediaType, totalBytes } = target;
+  const status = getAvMovieStatus(item);
+
+  const client = TwitterClient.get(targetAccount);
+  const mediaId = await uploadTwitterMedia(client, filePath, mediaType, totalBytes);
+  const result = await client.postTweet({ status, mediaIds: [mediaId] });
 };
 
 export const getTargetItem = async (documentPath: string, sort: ItemSortType) => {
@@ -179,61 +182,24 @@ const getMoviewUrl = async (targetUrl: string) => {
   return url;
 };
 
-export const uploadTwitterMedia = async ({
-  account,
-  filePath,
-  mediaType,
-  totalBytes,
-}: {
-  account: AccountType;
-  filePath: string;
-  mediaType: string;
-  totalBytes: number;
-}) => {
-  const client = TwitterClient.get(account);
-
-  const initResponse = await client.post('media/upload', {
-    command: 'INIT',
-    total_bytes: totalBytes,
-    media_type: mediaType,
-    media_category: 'tweet_video',
-  });
-  const mediaId = initResponse['media_id_string'];
+export const uploadTwitterMedia = async (
+  client: TwitterClient,
+  filePath: string,
+  mediaType: string,
+  totalBytes: number,
+) => {
+  const mediaId = await client.uploadVideoInit(totalBytes, mediaType);
 
   const mediaData = fs.readFileSync(filePath);
   const _5MB = 1048576 * 5;
   const chunkNum = Math.ceil(totalBytes / _5MB);
   for (let index = 0; index < chunkNum; index++) {
     const chunk = mediaData.slice(_5MB * index, _5MB * (index + 1));
-    await client.post('media/upload', {
-      command: 'APPEND',
-      media_id: mediaId,
-      media: chunk,
-      segment_index: index,
-    });
+    await client.uploadVideoAppend(mediaId, chunk, index);
   }
 
-  await client.post('media/upload', {
-    command: 'FINALIZE',
-    media_id: mediaId,
-  });
-
-  while (true) {
-    const statusResponse = await client.get('media/upload', {
-      command: 'STATUS',
-      media_id: mediaId,
-    });
-    const {
-      processing_info: { state, check_after_secs, progress_percent, error },
-    } = statusResponse;
-    if (state === 'succeeded') {
-      break;
-    }
-    if (state === 'failed') {
-      throw new Error(String(error));
-    }
-    await new Promise(resolve => setTimeout(resolve, 1000 * (check_after_secs + 5)));
-  }
+  await client.uploadVideoFinalize(mediaId);
+  await client.uploadVideoStatus(mediaId);
 
   fs.unlinkSync(filePath);
 
@@ -251,15 +217,6 @@ export const getAvMovieStatus = (item: ItemType) => {
 
   const linkContentList = ['', `【この動画の詳細はコチラ！】`, affiliateURL];
 
-  // let seriesContentList: string[] = [];
-  // if (series) {
-  //   const seriesList = series.map(target => target.name);
-  //   seriesList.forEach(seriesName => {
-  //     itemTitle = itemTitle.replace(seriesName, '');
-  //   });
-  //   seriesContentList = seriesContentList.concat(['', ...seriesList]);
-  // }
-
   let actressContentList: string[] = [];
   if (actress) {
     const acressList = actress.map(target => `#${target.name}`);
@@ -275,8 +232,6 @@ export const getAvMovieStatus = (item: ItemType) => {
     });
     genreContentList = ['', '【ジャンル】', ...genreList];
   }
-
-  // TODO: 発売日
 
   itemTitle = itemTitle.trim();
   let mainContentList = [itemTitle];
@@ -311,23 +266,5 @@ export const getAvMovieStatus = (item: ItemType) => {
     }
   }
 
-  console.log('status.length:', status.length);
   return status;
-};
-
-export const postTweet = async ({
-  account,
-  status,
-  mediaIds = [],
-}: {
-  account: AccountType;
-  status: string;
-  mediaIds?: string[];
-}) => {
-  const client = TwitterClient.get(account);
-  const params = {
-    status,
-    media_ids: mediaIds.join(','),
-  };
-  return await client.post('statuses/update', params);
 };
