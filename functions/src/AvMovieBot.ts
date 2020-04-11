@@ -8,11 +8,12 @@ import * as path from 'path';
 import * as ffmpeg_static from 'ffmpeg-static';
 import * as ffprobe_static from 'ffprobe-static';
 
-ffmpeg.setFfmpegPath(ffmpeg_static);
-ffmpeg.setFfprobePath(ffprobe_static.path);
-
 import { DMMApiClient, ItemType, ItemSortType } from './DMMApiClient';
 import { TwitterClient } from './TwitterClient';
+import { createGenreHashtag } from './utils';
+
+ffmpeg.setFfmpegPath(ffmpeg_static);
+ffmpeg.setFfprobePath(ffprobe_static.path);
 
 const targetDocumentPath = 'av_movie_bot';
 const targetAccount = 'ero_video_bot';
@@ -225,12 +226,9 @@ export const getAvMovieStatus = (item: ItemType) => {
 
   let genreContentList: string[] = [];
   if (genre) {
-    let genreList: string[] = [];
-    genre.forEach(target => {
-      const genreNames = target.name.split('\u30fb').map(g => `#${g}`);
-      genreList = genreList.concat([...genreNames]);
-    });
-    genreContentList = ['', '【ジャンル】', ...genreList];
+    const genreList = genre.map(g => g.name);
+    const hashtagList = createGenreHashtag(genreList);
+    genreContentList = ['', '【ジャンル】', ...hashtagList];
   }
 
   itemTitle = itemTitle.trim();

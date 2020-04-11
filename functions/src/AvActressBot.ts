@@ -2,6 +2,7 @@ import * as admin from 'firebase-admin';
 
 import { DMMApiClient, ItemActressType, ItemType, ItemGenreType, ActressType } from './DMMApiClient';
 import { TwitterClient } from './TwitterClient';
+import { createGenreHashtag } from './utils';
 
 const ref = admin
   .firestore()
@@ -151,12 +152,10 @@ const getAvPackageStatus = (actressInfo: ActressType, actressItems: ItemType[]) 
       genreObject[genreId] = { genre, count: 1 };
     }
   });
-  const sortedGenreList = Object.values(genreObject).sort((a, b) => (a.count > b.count ? -1 : 1));
-  let hashtagList = [`#${name}`];
-  sortedGenreList.forEach(item => {
-    const genreNames = item.genre.name.split('\u30fb').map(g => `#${g}`);
-    hashtagList = hashtagList.concat([...genreNames]);
-  });
+  const sortedGenreList = Object.values(genreObject)
+    .sort((a, b) => (a.count > b.count ? -1 : 1))
+    .map(item => item.genre.name);
+  const hashtagList = createGenreHashtag([name, ...sortedGenreList]);
 
   let status = '';
   while (true) {
