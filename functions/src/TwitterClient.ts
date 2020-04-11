@@ -19,56 +19,73 @@ const {
   recent_av_bot_access_token_secret,
 } = TWITTER_ENV;
 
-export type AccountType = 'av_video_bot' | 'ero_video_bot' | 'recent_av_bot';
+export const AccountTypeList = ['av_video_bot', 'ero_video_bot', 'recent_av_bot'] as const;
+export type AccountType = typeof AccountTypeList[number];
 
 export class TwitterClient {
+  account: AccountType;
   client: Twitter;
 
-  constructor(client: Twitter) {
+  constructor(account: AccountType, client: Twitter) {
+    this.account = account;
     this.client = client;
   }
 
   static get(account: AccountType) {
     if (account === 'av_video_bot') {
-      return this.avVideoBotClient();
+      return this.avVideoBotClient(account);
     }
     if (account === 'ero_video_bot') {
-      return this.eroVideoBotClient();
+      return this.eroVideoBotClient(account);
     }
     if (account === 'recent_av_bot') {
-      return this.recentVideoBotClient();
+      return this.recentVideoBotClient(account);
     }
     throw new Error(`NOT FOUND: ${account}`);
   }
 
-  private static avVideoBotClient() {
+  private static avVideoBotClient(account: AccountType) {
     const client = new Twitter({
       consumer_key: av_video_bot_consumer_key,
       consumer_secret: av_video_bot_consumer_secret,
       access_token_key: av_video_bot_access_token_key,
       access_token_secret: av_video_bot_access_token_secret,
     });
-    return new TwitterClient(client);
+    return new TwitterClient(account, client);
   }
 
-  private static eroVideoBotClient() {
+  private static eroVideoBotClient(account: AccountType) {
     const client = new Twitter({
       consumer_key: ero_video_bot_consumer_key,
       consumer_secret: ero_video_bot_consumer_secret,
       access_token_key: ero_video_bot_access_token_key,
       access_token_secret: ero_video_bot_access_token_secret,
     });
-    return new TwitterClient(client);
+    return new TwitterClient(account, client);
   }
 
-  private static recentVideoBotClient() {
+  private static recentVideoBotClient(account: AccountType) {
     const client = new Twitter({
       consumer_key: recent_av_bot_consumer_key,
       consumer_secret: recent_av_bot_consumer_secret,
       access_token_key: recent_av_bot_access_token_key,
       access_token_secret: recent_av_bot_access_token_secret,
     });
-    return new TwitterClient(client);
+    return new TwitterClient(account, client);
+  }
+
+  async getAccount() {
+    return await this.client.get('account/verify_credentials');
+  }
+
+  async getUserTimeline(screenName: string, includeRts = false, count = 200) {
+    const params = {
+      screen_name: screenName,
+      count,
+      include_rts: includeRts,
+    };
+    const response = await this.client.get('statuses/user_timeline', params);
+    return response as { id_str: string; retweeted: boolean; favorite_count: number }[];
   }
 
   async postTweet({ status, mediaIds = [] }: { status: string; mediaIds?: string[] }) {
@@ -137,5 +154,9 @@ export class TwitterClient {
       }
       await new Promise(resolve => setTimeout(resolve, 1000 * (check_after_secs + 5)));
     }
+  }
+
+  async postRetweet(tweetId: string) {
+    return await this.client.post(`statuses/retweet/${tweetId}`, {});
   }
 }
