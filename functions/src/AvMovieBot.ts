@@ -38,14 +38,12 @@ export const getTargetItem = async (documentPath: string, sort: ItemSortType) =>
   let selecteContendIds: string[] = doc.data()?.selecteContendIds || [];
 
   const LIMIT = 10;
-  const _15MB = 1048576 * 15;
   let targetItem;
   let tmpPath = '';
   let mediaType = '';
   let totalBytes = 0;
 
   for (const i of Array(LIMIT).keys()) {
-    console.log(`${i + 1} / ${LIMIT}`);
     const response = await DMMApiClient.getItemList({ offset: i * 100 + 1, sort });
     const {
       data: {
@@ -68,17 +66,12 @@ export const getTargetItem = async (documentPath: string, sort: ItemSortType) =>
         continue;
       }
 
+      console.log(size_720_480);
       const videoResponse = await axios.get(url, { responseType: 'arraybuffer' });
 
       const { headers, data } = videoResponse;
       mediaType = headers['content-type'];
       totalBytes = Number(headers['content-length']);
-      console.log('totalBytes:', totalBytes);
-
-      if (Number(totalBytes) > _15MB) {
-        selecteContendIds = selecteContendIds.concat([content_id]);
-        continue;
-      }
 
       const fileName = `${documentPath}${path.extname(url)}`;
       tmpPath = path.join(os.tmpdir(), fileName);
@@ -103,6 +96,7 @@ export const getTargetItem = async (documentPath: string, sort: ItemSortType) =>
       break;
     }
     if (targetItem) {
+      console.log(`${i + 1} / ${LIMIT}`);
       break;
     }
   }
@@ -111,7 +105,6 @@ export const getTargetItem = async (documentPath: string, sort: ItemSortType) =>
   if (targetItem) {
     selecteContendIds = selecteContendIds.concat([targetItem.content_id]);
     console.log('content_id:', targetItem.content_id);
-    console.log(targetItem.sampleMovieURL?.size_720_480);
   }
 
   console.log('selecteContendIds:', selecteContendIds.length);
@@ -161,6 +154,14 @@ const getMoviewUrl = async (targetUrl: string) => {
     await pauseButton.click();
   }
 
+  const butttonSelector = '.btn-bitrate';
+  await page.waitForSelector(butttonSelector);
+  const bitrateButton = await page.$(butttonSelector);
+  if (bitrateButton) {
+    const bitrate = await (await bitrateButton.getProperty('textContent')).jsonValue();
+    console.log(bitrate);
+  }
+
   await page.evaluate(() => {
     const ele = document.querySelector<HTMLElement>('.box-bitrate');
     if (ele) {
@@ -168,12 +169,13 @@ const getMoviewUrl = async (targetUrl: string) => {
     }
   });
 
-  const targetXpath = "//a[contains(text(), '1000kbps')]";
-  await page.waitForXPath(targetXpath);
-  const [target] = await page.$x(targetXpath);
-  if (target) {
-    await target.click();
-  }
+  // const targetXpath = "//a[contains(text(), '1000kbps')]";
+  // await page.waitForXPath(targetXpath);
+  // const [target] = await page.$x(targetXpath);
+  // if (target) {
+  //   await target.click();
+  // }
+
   const videoElementHandle = await page.$('video');
   if (!videoElementHandle) {
     return null;

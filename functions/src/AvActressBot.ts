@@ -28,7 +28,6 @@ const getTargetActress = async () => {
   let targetActress;
   let firstActress;
   for (const i of Array(LIMIT).keys()) {
-    console.log(`${i + 1} / ${LIMIT}`);
     const itemResponse = await DMMApiClient.getItemList({
       keyword: '単体作品',
       offset: i * 100 + 1,
@@ -63,6 +62,7 @@ const getTargetActress = async () => {
     }
 
     if (targetActress) {
+      console.log(`${i + 1} / ${LIMIT}`);
       break;
     }
   }
