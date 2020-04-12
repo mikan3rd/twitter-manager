@@ -1,6 +1,8 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
+import { AccountTypeList } from './TwitterClient';
+
 admin.initializeApp();
 
 import { tweetAvPackage } from './AvActressBot';
@@ -19,14 +21,10 @@ export const bulkPostTweet = functions
   });
 
 export const bulkRetweetAndFavorite = functions.region('asia-northeast1').https.onRequest(async (request, response) => {
-  await retweetRandom('av_video_bot');
-  await retweetRandom('ero_video_bot');
-  await retweetRandom('recent_av_bot');
-
-  await favoriteRandom('av_video_bot');
-  await favoriteRandom('ero_video_bot');
-  await favoriteRandom('recent_av_bot');
-
+  AccountTypeList.forEach(async account => {
+    await retweetRandom(account);
+    await favoriteRandom(account);
+  });
   response.send('SUCCESS: bulkRetweetAndFavorite');
 });
 
