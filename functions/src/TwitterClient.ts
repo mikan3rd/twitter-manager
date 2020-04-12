@@ -85,7 +85,13 @@ export class TwitterClient {
       include_rts: includeRts,
     };
     const response = await this.client.get('statuses/user_timeline', params);
-    return response as { id_str: string; retweeted: boolean; favorite_count: number }[];
+    return response as {
+      id_str: string;
+      retweeted: boolean;
+      retweet_count: number;
+      favorited: boolean;
+      favorite_count: number;
+    }[];
   }
 
   async postTweet({ status, mediaIds = [] }: { status: string; mediaIds?: string[] }) {
@@ -158,5 +164,9 @@ export class TwitterClient {
 
   async postRetweet(tweetId: string) {
     return await this.client.post(`statuses/retweet/${tweetId}`, {});
+  }
+
+  async postFavorite(tweetId: string) {
+    return await this.client.post(`favorites/create`, { id: tweetId });
   }
 }

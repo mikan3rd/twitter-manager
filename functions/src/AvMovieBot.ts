@@ -20,6 +20,10 @@ const targetAccount = 'ero_video_bot';
 
 export const tweetAvMovie = async () => {
   const target = await getTargetItem(targetDocumentPath, 'rank');
+  if (!target) {
+    return;
+  }
+
   const { item, filePath, mediaType, totalBytes } = target;
   const status = getAvMovieStatus(item);
 
@@ -67,27 +71,16 @@ export const getTargetItem = async (documentPath: string, sort: ItemSortType) =>
       }
 
       console.log(size_720_480);
-      const videoResponse = await axios.get(url, { responseType: 'arraybuffer' });
 
-      const { headers, data } = videoResponse;
-      mediaType = headers['content-type'];
-      totalBytes = Number(headers['content-length']);
+      const result = await saveFile(url, documentPath);
+      mediaType = result.mediaType;
+      totalBytes = result.totalBytes;
+      tmpPath = result.tmpPath;
 
-      const fileName = `${documentPath}${path.extname(url)}`;
-      tmpPath = path.join(os.tmpdir(), fileName);
-      fs.writeFileSync(tmpPath, data);
-
-      const format: ffmpeg.FfprobeFormat = await new Promise((resolve, reject) => {
-        ffmpeg.ffprobe(tmpPath, (err, metadata) => {
-          if (err) {
-            reject(err);
-          }
-          resolve(metadata.format);
-        });
-      });
-
+      const format = await getMediaFormat(tmpPath);
       const { duration } = format;
       if (!duration || duration > 140) {
+        console.log('Duration is Over:', duration);
         selecteContendIds = selecteContendIds.concat([content_id]);
         continue;
       }
@@ -96,21 +89,22 @@ export const getTargetItem = async (documentPath: string, sort: ItemSortType) =>
       break;
     }
     if (targetItem) {
-      console.log(`${i + 1} / ${LIMIT}`);
+      console.log(`Repeat end: ${i + 1} / ${LIMIT}`);
       break;
     }
   }
 
-  // TODO: 取得できなかった場合に対応
-  if (targetItem) {
-    selecteContendIds = selecteContendIds.concat([targetItem.content_id]);
-    console.log('content_id:', targetItem.content_id);
+  if (!targetItem) {
+    console.log('Reset selecteContendIds!!');
+    await ref.set({ selecteContendIds: [] }, { merge: true });
+    return null;
   }
 
+  selecteContendIds = selecteContendIds.concat([targetItem.content_id]);
   console.log('selecteContendIds:', selecteContendIds.length);
 
   await ref.set({ selecteContendIds }, { merge: true });
-  return { item: targetItem as ItemType, filePath: tmpPath, mediaType, totalBytes };
+  return { item: targetItem, filePath: tmpPath, mediaType, totalBytes };
 };
 
 const getMoviewUrl = async (targetUrl: string) => {
@@ -183,6 +177,32 @@ const getMoviewUrl = async (targetUrl: string) => {
   const url = (await (await videoElementHandle.getProperty('src')).jsonValue()) as string;
   await browser.close();
   return url;
+};
+
+const saveFile = async (url: string, documentPath: string) => {
+  const videoResponse = await axios.get(url, { responseType: 'arraybuffer' });
+
+  const { headers, data } = videoResponse;
+  const mediaType = headers['content-type'];
+  const totalBytes = Number(headers['content-length']);
+
+  const fileName = `${documentPath}${path.extname(url)}`;
+  const tmpPath = path.join(os.tmpdir(), fileName);
+  fs.writeFileSync(tmpPath, data);
+
+  return { mediaType, totalBytes, tmpPath };
+};
+
+const getMediaFormat = async (localPath: string) => {
+  const format: ffmpeg.FfprobeFormat = await new Promise((resolve, reject) => {
+    ffmpeg.ffprobe(localPath, (err, metadata) => {
+      if (err) {
+        reject(err);
+      }
+      resolve(metadata.format);
+    });
+  });
+  return format;
 };
 
 export const uploadTwitterMedia = async (

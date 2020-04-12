@@ -18,7 +18,7 @@ export const createGenreHashtag = (words: string[]) => {
   return hashtagList.concat(lowHashtagList);
 };
 
-export const retweetOtherAccount = async (account: AccountType) => {
+export const retweetRandom = async (account: AccountType) => {
   const client = TwitterClient.get(account);
   const targetAccount = AccountTypeList[Math.floor(Math.random() * AccountTypeList.length)];
   const tweets = await client.getUserTimeline(targetAccount);
@@ -26,5 +26,16 @@ export const retweetOtherAccount = async (account: AccountType) => {
   const targetTweet = sortedTweets.find(tweet => !tweet.retweeted);
   if (targetTweet) {
     await client.postRetweet(targetTweet.id_str);
+  }
+};
+
+export const favoriteRandom = async (account: AccountType) => {
+  const client = TwitterClient.get(account);
+  const targetAccount = AccountTypeList[Math.floor(Math.random() * AccountTypeList.length)];
+  const tweets = await client.getUserTimeline(targetAccount);
+  const sortedTweets = tweets.sort((a, b) => (a.favorite_count > b.favorite_count ? -1 : 1));
+  const targetTweet = sortedTweets.find(tweet => !tweet.favorited);
+  if (targetTweet) {
+    await client.postFavorite(targetTweet.id_str);
   }
 };

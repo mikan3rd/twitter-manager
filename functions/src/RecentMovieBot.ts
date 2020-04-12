@@ -6,6 +6,9 @@ const targetAccount = 'recent_av_bot';
 
 export const tweetRecentMovie = async () => {
   const target = await getTargetItem(targetDocumentPath, 'date');
+  if (!target) {
+    return;
+  }
   const { item, filePath, mediaType, totalBytes } = target;
   const status = getAvMovieStatus(item);
 

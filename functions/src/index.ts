@@ -6,7 +6,7 @@ admin.initializeApp();
 import { tweetAvPackage } from './AvActressBot';
 import { tweetAvMovie } from './AvMovieBot';
 import { tweetRecentMovie } from './RecentMovieBot';
-import { retweetOtherAccount } from './utils';
+import { retweetRandom, favoriteRandom } from './utils';
 
 export const bulkPostTweet = functions
   .region('asia-northeast1')
@@ -18,11 +18,16 @@ export const bulkPostTweet = functions
     response.send('SUCCESS: bulkPostTweet');
   });
 
-export const bulkRetweet = functions.region('asia-northeast1').https.onRequest(async (request, response) => {
-  await retweetOtherAccount('av_video_bot');
-  await retweetOtherAccount('ero_video_bot');
-  await retweetOtherAccount('recent_av_bot');
-  response.send('SUCCESS: bulkRetweet');
+export const bulkRetweetAndFavorite = functions.region('asia-northeast1').https.onRequest(async (request, response) => {
+  await retweetRandom('av_video_bot');
+  await retweetRandom('ero_video_bot');
+  await retweetRandom('recent_av_bot');
+
+  await favoriteRandom('av_video_bot');
+  await favoriteRandom('ero_video_bot');
+  await favoriteRandom('recent_av_bot');
+
+  response.send('SUCCESS: bulkRetweetAndFavorite');
 });
 
 export const tweetAvPackageTest = functions.region('asia-northeast1').https.onRequest(async (request, response) => {
@@ -46,10 +51,12 @@ export const tweetRecentMovieTest = functions
     response.send('SUCCESS: tweetRecentMovieTest');
   });
 
-export const retweetTest = functions
-  .region('asia-northeast1')
-  .runWith({ timeoutSeconds: 60 })
-  .https.onRequest(async (request, response) => {
-    await retweetOtherAccount('recent_av_bot');
-    response.send('SUCCESS: retweetTest');
-  });
+export const retweetTest = functions.region('asia-northeast1').https.onRequest(async (request, response) => {
+  await retweetRandom('recent_av_bot');
+  response.send('SUCCESS: retweetTest');
+});
+
+export const favoriteTest = functions.region('asia-northeast1').https.onRequest(async (request, response) => {
+  await favoriteRandom('recent_av_bot');
+  response.send('SUCCESS: favoriteTest');
+});
