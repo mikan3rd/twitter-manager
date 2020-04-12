@@ -20,8 +20,7 @@ export const createGenreHashtag = (words: string[]) => {
 
 export const retweetOtherAccount = async (account: AccountType) => {
   const client = TwitterClient.get(account);
-  const accountList = AccountTypeList.filter(accountType => accountType !== account);
-  const targetAccount = accountList[Math.floor(Math.random() * accountList.length)];
+  const targetAccount = AccountTypeList[Math.floor(Math.random() * AccountTypeList.length)];
   const tweets = await client.getUserTimeline(targetAccount);
   const sortedTweets = tweets.sort((a, b) => (a.favorite_count > b.favorite_count ? -1 : 1));
   const targetTweet = sortedTweets.find(tweet => !tweet.retweeted);
