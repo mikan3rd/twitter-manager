@@ -8,6 +8,7 @@ import * as path from 'path';
 import * as ffmpeg_static from 'ffmpeg-static';
 import * as ffprobe_static from 'ffprobe-static';
 
+import { BotClient, AccountType } from './BotClient';
 import { DMMApiClient, ItemType, ItemSortType } from './DMMApiClient';
 import { TwitterClient } from './TwitterClient';
 import { createGenreHashtag } from './utils';
@@ -15,11 +16,9 @@ import { createGenreHashtag } from './utils';
 ffmpeg.setFfmpegPath(ffmpeg_static);
 ffmpeg.setFfprobePath(ffprobe_static.path);
 
-const targetDocumentPath = 'av_movie_bot';
-const targetAccount = 'ero_video_bot';
-
-export const tweetAvMovie = async () => {
-  const target = await getTargetItem(targetDocumentPath, 'rank');
+export const tweetAvMovie = async (account: AccountType, sort: ItemSortType) => {
+  const bot = BotClient.get(account);
+  const target = await getTargetItem(bot, sort);
   if (!target) {
     return;
   }
@@ -27,12 +26,13 @@ export const tweetAvMovie = async () => {
   const { item, filePath, mediaType, totalBytes } = target;
   const status = getAvMovieStatus(item);
 
-  const client = TwitterClient.get(targetAccount);
+  const client = TwitterClient.get(bot.twitterConfig);
   const mediaId = await uploadTwitterMedia(client, filePath, mediaType, totalBytes);
   const result = await client.postTweet({ status, mediaIds: [mediaId] });
 };
 
-export const getTargetItem = async (documentPath: string, sort: ItemSortType) => {
+export const getTargetItem = async (bot: BotClient, sort: ItemSortType) => {
+  const { documentPath } = bot;
   const ref = admin
     .firestore()
     .collection('twitter')

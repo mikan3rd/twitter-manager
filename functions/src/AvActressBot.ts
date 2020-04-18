@@ -1,5 +1,6 @@
 import * as admin from 'firebase-admin';
 
+import { BotClient } from './BotClient';
 import { DMMApiClient, ItemActressType, ItemType, ItemGenreType, ActressType } from './DMMApiClient';
 import { TwitterClient } from './TwitterClient';
 import { createGenreHashtag } from './utils';
@@ -15,7 +16,8 @@ export const tweetAvPackage = async () => {
   const status = getAvPackageStatus(actressInfo, actressItems);
   const images = actressItems.map(item => item['imageURL']['large']);
 
-  const client = TwitterClient.get('av_video_bot');
+  const bot = BotClient.get('av_video_bot');
+  const client = TwitterClient.get(bot.twitterConfig);
   const mediaIds = await client.uploadImages(images);
   const result = await client.postTweet({ status, mediaIds });
 };

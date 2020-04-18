@@ -1,105 +1,75 @@
 import * as Twitter from 'twitter';
-import * as functions from 'firebase-functions';
 import axios from 'axios';
 
-const TWITTER_ENV = functions.config().twitter;
+export type TweetObjectType = {
+  id_str: string;
+  retweeted: boolean;
+  retweet_count: number;
+  favorited: boolean;
+  favorite_count: number;
+  user: TweetUserType;
+};
 
-const {
-  av_video_bot_consumer_key,
-  av_video_bot_consumer_secret,
-  av_video_bot_access_token_key,
-  av_video_bot_access_token_secret,
-  ero_video_bot_consumer_key,
-  ero_video_bot_consumer_secret,
-  ero_video_bot_access_token_key,
-  ero_video_bot_access_token_secret,
-  recent_av_bot_consumer_key,
-  recent_av_bot_consumer_secret,
-  recent_av_bot_access_token_key,
-  recent_av_bot_access_token_secret,
-} = TWITTER_ENV;
-
-export const AccountTypeList = ['av_video_bot', 'ero_video_bot', 'recent_av_bot'] as const;
-export type AccountType = typeof AccountTypeList[number];
+export type TweetUserType = {
+  id_str: string;
+  screen_name: string;
+  followers_count: number;
+  friends_count: number;
+  follow_request_sent: boolean;
+  following: boolean;
+  blocked_by: boolean;
+  lang: string;
+};
 
 export class TwitterClient {
-  account: AccountType;
   client: Twitter;
 
-  constructor(account: AccountType, client: Twitter) {
-    this.account = account;
+  constructor(client: Twitter) {
     this.client = client;
   }
 
-  static get(account: AccountType) {
-    if (account === 'av_video_bot') {
-      return this.avVideoBotClient(account);
-    }
-    if (account === 'ero_video_bot') {
-      return this.eroVideoBotClient(account);
-    }
-    if (account === 'recent_av_bot') {
-      return this.recentVideoBotClient(account);
-    }
-    throw new Error(`NOT FOUND: ${account}`);
-  }
-
-  private static avVideoBotClient(account: AccountType) {
-    const client = new Twitter({
-      consumer_key: av_video_bot_consumer_key,
-      consumer_secret: av_video_bot_consumer_secret,
-      access_token_key: av_video_bot_access_token_key,
-      access_token_secret: av_video_bot_access_token_secret,
-    });
-    return new TwitterClient(account, client);
-  }
-
-  private static eroVideoBotClient(account: AccountType) {
-    const client = new Twitter({
-      consumer_key: ero_video_bot_consumer_key,
-      consumer_secret: ero_video_bot_consumer_secret,
-      access_token_key: ero_video_bot_access_token_key,
-      access_token_secret: ero_video_bot_access_token_secret,
-    });
-    return new TwitterClient(account, client);
-  }
-
-  private static recentVideoBotClient(account: AccountType) {
-    const client = new Twitter({
-      consumer_key: recent_av_bot_consumer_key,
-      consumer_secret: recent_av_bot_consumer_secret,
-      access_token_key: recent_av_bot_access_token_key,
-      access_token_secret: recent_av_bot_access_token_secret,
-    });
-    return new TwitterClient(account, client);
+  static get(twitterConfig: Twitter.AccessTokenOptions) {
+    const client = new Twitter(twitterConfig);
+    return new TwitterClient(client);
   }
 
   async getAccount() {
-    return await this.client.get('account/verify_credentials');
+    const response = await this.client.get('account/verify_credentials', {});
+    return response as TweetUserType;
   }
 
   async getUserTimeline(screenName: string, includeRts = false, count = 200) {
-    const params = {
+    const response = await this.client.get('statuses/user_timeline', {
       screen_name: screenName,
       count,
       include_rts: includeRts,
-    };
-    const response = await this.client.get('statuses/user_timeline', params);
-    return response as {
-      id_str: string;
-      retweeted: boolean;
-      retweet_count: number;
-      favorited: boolean;
-      favorite_count: number;
-    }[];
+    });
+    return response as TweetObjectType[];
+  }
+
+  async getListTweets(listId: string, includeRts = false, count = 200) {
+    const response = await this.client.get('lists/statuses', {
+      list_id: listId,
+      count,
+      include_rts: includeRts,
+    });
+    return response as TweetObjectType[];
+  }
+
+  async getRetweetUser(tweetId: string, count = 100) {
+    const response = await this.client.get(`statuses/retweets/${tweetId}`, { count, trim_user: false });
+    return response as TweetObjectType[];
+  }
+
+  async getFavoriteUsers(tweetId: string) {
+    return await this.client.get(`/timeline/liked_by`, { tweet_id: tweetId });
   }
 
   async postTweet({ status, mediaIds = [] }: { status: string; mediaIds?: string[] }) {
-    const params = {
+    return await this.client.post('statuses/update', {
       status,
       media_ids: mediaIds.join(','),
-    };
-    return await this.client.post('statuses/update', params);
+    });
   }
 
   async uploadImages(images: string[]) {
@@ -168,5 +138,9 @@ export class TwitterClient {
 
   async postFavorite(tweetId: string) {
     return await this.client.post(`favorites/create`, { id: tweetId });
+  }
+
+  async postFollow(userId: string) {
+    return await this.client.post(`friendships/create`, { user_id: userId });
   }
 }
