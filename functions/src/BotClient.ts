@@ -16,6 +16,8 @@ const {
   recent_av_bot_consumer_secret,
   recent_av_bot_access_token_key,
   recent_av_bot_access_token_secret,
+  recent_av_bot_username,
+  recent_av_bot_password,
 } = TWITTER_ENV;
 
 export const AccountTypeList = ['av_video_bot', 'ero_video_bot', 'recent_av_bot'] as const;
@@ -23,13 +25,23 @@ export type AccountType = typeof AccountTypeList[number];
 
 export class BotClient {
   account: AccountType;
+  username: string;
+  password: string;
   twitterConfig: Twitter.AccessTokenOptions;
   documentPath: string;
 
-  constructor(account: AccountType, twitterConfig: Twitter.AccessTokenOptions, documentPath: string) {
+  constructor(
+    account: AccountType,
+    twitterConfig: Twitter.AccessTokenOptions,
+    documentPath: string,
+    username?: string,
+    password?: string,
+  ) {
     this.account = account;
     this.twitterConfig = twitterConfig;
     this.documentPath = documentPath;
+    this.username = username || '';
+    this.password = password || '';
   }
 
   static get(account: AccountType) {
@@ -72,6 +84,6 @@ export class BotClient {
       access_token_key: recent_av_bot_access_token_key,
       access_token_secret: recent_av_bot_access_token_secret,
     };
-    return new BotClient(account, twitterConfig, 'recent_av_bot');
+    return new BotClient(account, twitterConfig, 'recent_av_bot', recent_av_bot_username, recent_av_bot_password);
   }
 }

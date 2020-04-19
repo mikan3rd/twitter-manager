@@ -7,7 +7,7 @@ admin.initializeApp();
 
 import { tweetAvPackage } from './AvActressBot';
 import { tweetAvMovie } from './AvMovieBot';
-import { retweetRandom, favoriteRandom, autoFollow, getFavorite } from './utils';
+import { retweetRandom, favoriteRandom, autoRetweetFollow, autoFavoriteFollow } from './utils';
 
 export const bulkPostTweet = functions
   .region('asia-northeast1')
@@ -27,12 +27,16 @@ export const bulkRetweetAndFavorite = functions.region('asia-northeast1').https.
   response.send('SUCCESS: bulkRetweetAndFavorite');
 });
 
-export const bulkFollow = functions.region('asia-northeast1').https.onRequest(async (request, response) => {
-  for (const account of AccountTypeList) {
-    await autoFollow(account);
-  }
-  response.send('SUCCESS: bulkFollow');
-});
+export const bulkFollow = functions
+  .region('asia-northeast1')
+  .runWith({ timeoutSeconds: 540, memory: '512MB' })
+  .https.onRequest(async (request, response) => {
+    for (const account of AccountTypeList) {
+      await autoRetweetFollow(account);
+      await autoFavoriteFollow(account);
+    }
+    response.send('SUCCESS: bulkFollow');
+  });
 
 export const tweetAvPackageTest = functions.region('asia-northeast1').https.onRequest(async (request, response) => {
   await tweetAvPackage();
@@ -41,7 +45,7 @@ export const tweetAvPackageTest = functions.region('asia-northeast1').https.onRe
 
 export const tweetAvMovieTest = functions
   .region('asia-northeast1')
-  .runWith({ timeoutSeconds: 60, memory: '1GB' })
+  .runWith({ memory: '1GB' })
   .https.onRequest(async (request, response) => {
     await tweetAvMovie('ero_video_bot', 'rank');
     response.send('SUCCESS: tweetAvMovieTest');
@@ -49,7 +53,7 @@ export const tweetAvMovieTest = functions
 
 export const tweetRecentMovieTest = functions
   .region('asia-northeast1')
-  .runWith({ timeoutSeconds: 60, memory: '1GB' })
+  .runWith({ memory: '1GB' })
   .https.onRequest(async (request, response) => {
     await tweetAvMovie('recent_av_bot', 'date');
     response.send('SUCCESS: tweetRecentMovieTest');
@@ -65,12 +69,15 @@ export const favoriteTest = functions.region('asia-northeast1').https.onRequest(
   response.send('SUCCESS: favoriteTest');
 });
 
-export const followTest = functions.region('asia-northeast1').https.onRequest(async (request, response) => {
-  await autoFollow('recent_av_bot');
-  response.send('SUCCESS: followTest');
+export const autoRetweetFollowTest = functions.region('asia-northeast1').https.onRequest(async (request, response) => {
+  await autoRetweetFollow('recent_av_bot');
+  response.send('SUCCESS: autoRetweetFollowTest');
 });
 
-export const getFavoriteUserTest = functions.region('asia-northeast1').https.onRequest(async (request, response) => {
-  await getFavorite('recent_av_bot');
-  response.send('SUCCESS: getFavoriteUserTest');
-});
+export const autoFavoriteFollowTest = functions
+  .region('asia-northeast1')
+  .runWith({ timeoutSeconds: 120, memory: '512MB' })
+  .https.onRequest(async (request, response) => {
+    await autoFavoriteFollow('recent_av_bot');
+    response.send('SUCCESS: autoFavoriteFollowTest');
+  });

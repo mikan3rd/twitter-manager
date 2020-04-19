@@ -18,6 +18,7 @@ export type TweetUserType = {
   follow_request_sent: boolean;
   following: boolean;
   blocked_by: boolean;
+  followed_by: boolean;
   lang: string;
 };
 

@@ -163,13 +163,6 @@ const getMoviewUrl = async (targetUrl: string) => {
     }
   });
 
-  // const targetXpath = "//a[contains(text(), '1000kbps')]";
-  // await page.waitForXPath(targetXpath);
-  // const [target] = await page.$x(targetXpath);
-  // if (target) {
-  //   await target.click();
-  // }
-
   const videoElementHandle = await page.$('video');
   if (!videoElementHandle) {
     return null;
