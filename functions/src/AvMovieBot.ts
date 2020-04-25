@@ -71,6 +71,7 @@ export const getTargetItem = async (bot: BotClient, sort: ItemSortType) => {
       }
 
       console.log(size_720_480);
+      console.log(url);
 
       const result = await saveFile(url, documentPath);
       mediaType = result.mediaType;
@@ -168,6 +169,7 @@ const getMoviewUrl = async (targetUrl: string) => {
     return null;
   }
   const url = (await (await videoElementHandle.getProperty('src')).jsonValue()) as string;
+
   await browser.close();
   return url;
 };

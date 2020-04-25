@@ -137,7 +137,7 @@ const autoFollow = async (client: TwitterClient, users: TweetUserType[]) => {
   });
 
   const sortedUsers = Object.values(userObject).sort((a, b) =>
-    a.friends_count / a.followers_count > b.friends_count / b.followers_count ? -1 : 1,
+    a.friends_count / a.followers_count > b.friends_count / (b.followers_count || 1) ? -1 : 1,
   );
 
   console.log('sortedUsers:', sortedUsers.length);
@@ -160,7 +160,7 @@ const getTwitterToken = async (username?: string, password?: string) => {
   const browser = await puppeteer.launch({
     headless: true,
     devtools: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--autoplay-policy=no-user-gesture-required'],
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
 
   const page = await browser.newPage();
@@ -177,7 +177,7 @@ const getTwitterToken = async (username?: string, password?: string) => {
     await request.continue();
   });
 
-  await page.goto('https://twitter.com/login');
+  await page.goto('https://twitter.com/login', { waitUntil: 'networkidle2' });
 
   const usernameSelector = 'input[name="session[username_or_email]"]';
   await page.waitForSelector(usernameSelector);
@@ -188,10 +188,36 @@ const getTwitterToken = async (username?: string, password?: string) => {
   await page.type(passwordSelector, password);
 
   const loginButtonSelector = 'div[data-testid="LoginForm_Login_Button"]';
-  await page.click(loginButtonSelector);
+  await page.waitForSelector(loginButtonSelector);
+
+  await Promise.all([page.click(loginButtonSelector), page.waitForNavigation({ waitUntil: 'networkidle2' })]);
+  console.log('1st:', page.url());
+
+  if (RegExp('twitter.com/login').test(page.url())) {
+    await page.waitForSelector(usernameSelector);
+    await page.type(usernameSelector, username);
+
+    await page.waitForSelector(passwordSelector);
+    await page.type(passwordSelector, password);
+
+    await page.waitForSelector(loginButtonSelector);
+    await Promise.all([page.click(loginButtonSelector), page.waitForNavigation({ waitUntil: 'networkidle2' })]);
+    console.log('2nd:', page.url());
+  }
+
+  if (RegExp('account/login_challenge').test(page.url())) {
+    const phoneSelector = '#challenge_response';
+    await page.waitForSelector(phoneSelector);
+    await page.type(phoneSelector, '08069260522');
+
+    await Promise.all([page.keyboard.press('Enter'), page.waitForNavigation({ waitUntil: 'networkidle2' })]);
+    console.log('3rd:', page.url());
+  }
 
   const cookies = await page.cookies();
   const cookie = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+
+  await browser.close();
 
   return { csrfToken, authorization, cookie };
 };

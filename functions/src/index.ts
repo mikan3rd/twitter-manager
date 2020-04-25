@@ -12,30 +12,64 @@ import { retweetRandom, favoriteRandom, autoRetweetFollow, autoFavoriteFollow } 
 export const bulkPostTweet = functions
   .region('asia-northeast1')
   .runWith({ timeoutSeconds: 540, memory: '1GB' })
-  .https.onRequest(async (request, response) => {
-    await tweetAvPackage();
-    await tweetAvMovie('ero_video_bot', 'rank');
-    await tweetAvMovie('recent_av_bot', 'date');
-    response.send('SUCCESS: bulkPostTweet');
+  .pubsub.schedule('1 * * * *')
+  .timeZone('Asia/Tokyo')
+  .onRun(async context => {
+    try {
+      await tweetAvPackage();
+    } catch (e) {
+      console.error(e);
+    }
+    try {
+      await tweetAvMovie('ero_video_bot', 'rank');
+    } catch (e) {
+      console.error(e);
+    }
+    try {
+      await tweetAvMovie('recent_av_bot', 'date');
+    } catch (e) {
+      console.error(e);
+    }
   });
 
-export const bulkRetweetAndFavorite = functions.region('asia-northeast1').https.onRequest(async (request, response) => {
-  for (const account of AccountTypeList) {
-    await retweetRandom(account);
-    await favoriteRandom(account);
-  }
-  response.send('SUCCESS: bulkRetweetAndFavorite');
-});
+export const bulkRetweetAndFavorite = functions
+  .region('asia-northeast1')
+  .runWith({ timeoutSeconds: 540 })
+  .pubsub.schedule('31 * * * *')
+  .timeZone('Asia/Tokyo')
+  .onRun(async context => {
+    for (const account of AccountTypeList) {
+      try {
+        await retweetRandom(account);
+      } catch (e) {
+        console.error(e);
+      }
+      try {
+        await favoriteRandom(account);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  });
 
 export const bulkFollow = functions
   .region('asia-northeast1')
-  .runWith({ timeoutSeconds: 540, memory: '512MB' })
-  .https.onRequest(async (request, response) => {
+  .runWith({ timeoutSeconds: 540, memory: '1GB' })
+  .pubsub.schedule('10 18,21 * * *')
+  .timeZone('Asia/Tokyo')
+  .onRun(async context => {
     for (const account of AccountTypeList) {
-      await autoRetweetFollow(account);
-      await autoFavoriteFollow(account);
+      try {
+        await autoRetweetFollow(account);
+      } catch (e) {
+        console.error(e);
+      }
+      try {
+        await autoFavoriteFollow(account);
+      } catch (e) {
+        console.error(e);
+      }
     }
-    response.send('SUCCESS: bulkFollow');
   });
 
 export const tweetAvPackageTest = functions.region('asia-northeast1').https.onRequest(async (request, response) => {
@@ -76,8 +110,8 @@ export const autoRetweetFollowTest = functions.region('asia-northeast1').https.o
 
 export const autoFavoriteFollowTest = functions
   .region('asia-northeast1')
-  .runWith({ timeoutSeconds: 120, memory: '512MB' })
+  .runWith({ memory: '1GB' })
   .https.onRequest(async (request, response) => {
-    await autoFavoriteFollow('recent_av_bot');
+    await autoFavoriteFollow('av_video_bot');
     response.send('SUCCESS: autoFavoriteFollowTest');
   });

@@ -8,10 +8,14 @@ const {
   av_video_bot_consumer_secret,
   av_video_bot_access_token_key,
   av_video_bot_access_token_secret,
+  av_video_bot_username,
+  av_video_bot_password,
   ero_video_bot_consumer_key,
   ero_video_bot_consumer_secret,
   ero_video_bot_access_token_key,
   ero_video_bot_access_token_secret,
+  ero_video_bot_username,
+  ero_video_bot_password,
   recent_av_bot_consumer_key,
   recent_av_bot_consumer_secret,
   recent_av_bot_access_token_key,
@@ -34,14 +38,14 @@ export class BotClient {
     account: AccountType,
     twitterConfig: Twitter.AccessTokenOptions,
     documentPath: string,
-    username?: string,
-    password?: string,
+    username: string,
+    password: string,
   ) {
     this.account = account;
     this.twitterConfig = twitterConfig;
     this.documentPath = documentPath;
-    this.username = username || '';
-    this.password = password || '';
+    this.username = username;
+    this.password = password;
   }
 
   static get(account: AccountType) {
@@ -64,7 +68,7 @@ export class BotClient {
       access_token_key: av_video_bot_access_token_key,
       access_token_secret: av_video_bot_access_token_secret,
     };
-    return new BotClient(account, twitterConfig, 'av_actress_bot');
+    return new BotClient(account, twitterConfig, 'av_actress_bot', av_video_bot_username, av_video_bot_password);
   }
 
   private static eroVideoBot(account: AccountType) {
@@ -74,7 +78,7 @@ export class BotClient {
       access_token_key: ero_video_bot_access_token_key,
       access_token_secret: ero_video_bot_access_token_secret,
     };
-    return new BotClient(account, twitterConfig, 'av_movie_bot');
+    return new BotClient(account, twitterConfig, 'av_movie_bot', ero_video_bot_username, ero_video_bot_password);
   }
 
   private static recentVideoBot(account: AccountType) {
