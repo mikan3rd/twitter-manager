@@ -17,7 +17,7 @@
     "axios": "0.19.2",
     "ffmpeg-static": "4.2.1",
     "ffprobe-static": "3.0.0",
-    "firebase-admin": "8.11.0",
+    "firebase-admin": "8.12.1",
     "firebase-functions": "3.6.1",
     "fluent-ffmpeg": "2.1.2",
     "puppeteer": "2.1.1",
