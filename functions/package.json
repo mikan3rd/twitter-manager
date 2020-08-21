@@ -14,7 +14,7 @@
   },
   "main": "lib/index.js",
   "dependencies": {
-    "axios": "0.19.2",
+    "axios": "0.20.0",
     "ffmpeg-static": "4.2.7",
     "ffprobe-static": "3.0.0",
     "firebase-admin": "8.13.0",
