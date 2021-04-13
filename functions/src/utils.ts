@@ -1,17 +1,17 @@
-import * as admin from 'firebase-admin';
-import * as puppeteer from 'puppeteer';
-import axios from 'axios';
+import axios from "axios";
+import admin from "firebase-admin";
+import * as puppeteer from "puppeteer";
 
-import { TwitterClient, TweetUserType } from './TwitterClient';
-import { AccountType, AccountTypeList, BotClient } from './BotClient';
+import { AccountType, AccountTypeList, BotClient } from "./BotClient";
+import { TweetUserType, TwitterClient } from "./TwitterClient";
 
 export const createGenreHashtag = (words: string[]) => {
-  const LowPriorityWord = ['ハイビジョン', '独占配信', '4時間以上作品', '単体作品'];
+  const LowPriorityWord = ["ハイビジョン", "独占配信", "4時間以上作品", "単体作品"];
   const hashtagList: string[] = [];
   const lowHashtagList: string[] = [];
-  words.forEach(word => {
-    const splitWords = word.split('\u30fb');
-    splitWords.forEach(w => {
+  words.forEach((word) => {
+    const splitWords = word.split("\u30fb");
+    splitWords.forEach((w) => {
       const hashtag = `#${w}`;
       if (LowPriorityWord.includes(w)) {
         lowHashtagList.push(hashtag);
@@ -29,7 +29,7 @@ export const retweetRandom = async (account: AccountType) => {
   const targetAccount = AccountTypeList[Math.floor(Math.random() * AccountTypeList.length)];
   const tweets = await client.getUserTimeline(targetAccount);
   const sortedTweets = tweets.sort((a, b) => (a.favorite_count > b.favorite_count ? -1 : 1));
-  const targetTweet = sortedTweets.find(tweet => !tweet.retweeted);
+  const targetTweet = sortedTweets.find((tweet) => !tweet.retweeted);
   if (targetTweet) {
     await client.postRetweet(targetTweet.id_str);
   }
@@ -41,7 +41,7 @@ export const favoriteRandom = async (account: AccountType) => {
   const targetAccount = AccountTypeList[Math.floor(Math.random() * AccountTypeList.length)];
   const tweets = await client.getUserTimeline(targetAccount);
   const sortedTweets = tweets.sort((a, b) => (a.favorite_count > b.favorite_count ? -1 : 1));
-  const targetTweet = sortedTweets.find(tweet => !tweet.favorited);
+  const targetTweet = sortedTweets.find((tweet) => !tweet.favorited);
   if (targetTweet) {
     await client.postFavorite(targetTweet.id_str);
   }
@@ -62,7 +62,7 @@ export const autoRetweetFollow = async (account: AccountType) => {
   let users: TweetUserType[] = [];
   for (const tweet of sortedTweets.slice(0, LIMIT)) {
     const result = await client.getRetweetUser(tweet.id_str);
-    const tmpUsers = result.map(r => r.user);
+    const tmpUsers = result.map((r) => r.user);
     users = users.concat(tmpUsers);
   }
   await autoFollow(client, users);
@@ -90,9 +90,9 @@ export const autoFavoriteFollow = async (account: AccountType) => {
   let users: TweetUserType[] = [];
   for (const tweet of sortedTweets.slice(0, LIMIT)) {
     const response = await axios({
-      method: 'GET',
-      url: 'https://api.twitter.com/2/timeline/liked_by.json',
-      headers: { Authorization: authorization, 'x-csrf-token': csrfToken, Cookie: cookie },
+      method: "GET",
+      url: "https://api.twitter.com/2/timeline/liked_by.json",
+      headers: { Authorization: authorization, "x-csrf-token": csrfToken, Cookie: cookie },
       params: { tweet_id: tweet.id_str, include_followed_by: true, include_blocked_by: true },
     });
 
@@ -103,15 +103,12 @@ export const autoFavoriteFollow = async (account: AccountType) => {
 };
 
 const getTargetListTweets = async (client: TwitterClient, documentPath: string) => {
-  const ref = admin
-    .firestore()
-    .collection('twitter')
-    .doc(documentPath);
+  const ref = admin.firestore().collection("twitter").doc(documentPath);
   const doc = await ref.get();
   const listId: string | undefined = doc.data()?.listId;
 
   if (!listId) {
-    console.log('NEED listId!');
+    console.log("NEED listId!");
     return;
   }
 
@@ -126,7 +123,7 @@ const getTargetListTweets = async (client: TwitterClient, documentPath: string) 
 
 const autoFollow = async (client: TwitterClient, users: TweetUserType[]) => {
   const userObject: { [id_str: string]: TweetUserType } = {};
-  users.forEach(user => {
+  users.forEach((user) => {
     if (user.following || user.follow_request_sent || user.blocked_by || user.followed_by) {
       return;
     }
@@ -140,11 +137,11 @@ const autoFollow = async (client: TwitterClient, users: TweetUserType[]) => {
     a.friends_count / a.followers_count > b.friends_count / (b.followers_count || 1) ? -1 : 1,
   );
 
-  console.log('sortedUsers:', sortedUsers.length);
+  console.log("sortedUsers:", sortedUsers.length);
 
   const FOLLOW_NUM = 9;
   for (const user of sortedUsers.slice(0, FOLLOW_NUM)) {
-    console.log('follow:', `@${user.screen_name}`);
+    console.log("follow:", `@${user.screen_name}`);
     await client.postFollow(user.id_str);
   }
 };
@@ -154,30 +151,30 @@ const getTwitterToken = async (username?: string, password?: string) => {
     return;
   }
 
-  let authorization = '';
-  let csrfToken = '';
+  let authorization = "";
+  let csrfToken = "";
 
   const browser = await puppeteer.launch({
     headless: true,
     devtools: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
 
   const page = await browser.newPage();
 
   await page.setRequestInterception(true);
-  page.on('request', async request => {
+  page.on("request", async (request) => {
     const headers = request.headers();
-    if (headers['authorization']) {
-      authorization = headers['authorization'];
+    if (headers["authorization"]) {
+      authorization = headers["authorization"];
     }
-    if (headers['x-csrf-token']) {
-      csrfToken = headers['x-csrf-token'];
+    if (headers["x-csrf-token"]) {
+      csrfToken = headers["x-csrf-token"];
     }
     await request.continue();
   });
 
-  await page.goto('https://twitter.com/login', { waitUntil: 'networkidle2' });
+  await page.goto("https://twitter.com/login", { waitUntil: "networkidle2" });
 
   const usernameSelector = 'input[name="session[username_or_email]"]';
   await page.waitForSelector(usernameSelector);
@@ -190,10 +187,10 @@ const getTwitterToken = async (username?: string, password?: string) => {
   const loginButtonSelector = 'div[data-testid="LoginForm_Login_Button"]';
   await page.waitForSelector(loginButtonSelector);
 
-  await Promise.all([page.click(loginButtonSelector), page.waitForNavigation({ waitUntil: 'networkidle2' })]);
-  console.log('1st:', page.url());
+  await Promise.all([page.click(loginButtonSelector), page.waitForNavigation({ waitUntil: "networkidle2" })]);
+  console.log("1st:", page.url());
 
-  if (RegExp('twitter.com/login').test(page.url())) {
+  if (RegExp("twitter.com/login").test(page.url())) {
     await page.waitForSelector(usernameSelector);
     await page.type(usernameSelector, username);
 
@@ -201,21 +198,21 @@ const getTwitterToken = async (username?: string, password?: string) => {
     await page.type(passwordSelector, password);
 
     await page.waitForSelector(loginButtonSelector);
-    await Promise.all([page.click(loginButtonSelector), page.waitForNavigation({ waitUntil: 'networkidle2' })]);
-    console.log('2nd:', page.url());
+    await Promise.all([page.click(loginButtonSelector), page.waitForNavigation({ waitUntil: "networkidle2" })]);
+    console.log("2nd:", page.url());
   }
 
-  if (RegExp('account/login_challenge').test(page.url())) {
-    const phoneSelector = '#challenge_response';
+  if (RegExp("account/login_challenge").test(page.url())) {
+    const phoneSelector = "#challenge_response";
     await page.waitForSelector(phoneSelector);
-    await page.type(phoneSelector, '08069260522');
+    await page.type(phoneSelector, "08069260522");
 
-    await Promise.all([page.keyboard.press('Enter'), page.waitForNavigation({ waitUntil: 'networkidle2' })]);
-    console.log('3rd:', page.url());
+    await Promise.all([page.keyboard.press("Enter"), page.waitForNavigation({ waitUntil: "networkidle2" })]);
+    console.log("3rd:", page.url());
   }
 
   const cookies = await page.cookies();
-  const cookie = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+  const cookie = cookies.map((c) => `${c.name}=${c.value}`).join("; ");
 
   await browser.close();
 

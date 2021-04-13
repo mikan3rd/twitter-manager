@@ -1,5 +1,5 @@
-import * as Twitter from 'twitter';
-import axios from 'axios';
+import axios from "axios";
+import * as Twitter from "twitter";
 
 export type TweetObjectType = {
   id_str: string;
@@ -35,12 +35,12 @@ export class TwitterClient {
   }
 
   async getAccount() {
-    const response = await this.client.get('account/verify_credentials', {});
+    const response = await this.client.get("account/verify_credentials", {});
     return response as TweetUserType;
   }
 
   async getUserTimeline(screenName: string, includeRts = false, count = 200) {
-    const response = await this.client.get('statuses/user_timeline', {
+    const response = await this.client.get("statuses/user_timeline", {
       screen_name: screenName,
       count,
       include_rts: includeRts,
@@ -49,7 +49,7 @@ export class TwitterClient {
   }
 
   async getListTweets(listId: string, includeRts = false, count = 200) {
-    const response = await this.client.get('lists/statuses', {
+    const response = await this.client.get("lists/statuses", {
       list_id: listId,
       count,
       include_rts: includeRts,
@@ -67,17 +67,17 @@ export class TwitterClient {
   }
 
   async postTweet({ status, mediaIds = [] }: { status: string; mediaIds?: string[] }) {
-    return await this.client.post('statuses/update', {
+    return await this.client.post("statuses/update", {
       status,
-      media_ids: mediaIds.join(','),
+      media_ids: mediaIds.join(","),
     });
   }
 
   async uploadImages(images: string[]) {
     const mediaIds: string[] = [];
     for (const imageUrl of images) {
-      const { data } = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-      const { media_id_string } = await this.client.post('media/upload', {
+      const { data } = await axios.get(imageUrl, { responseType: "arraybuffer" });
+      const { media_id_string } = await this.client.post("media/upload", {
         media: data,
       });
       mediaIds.push(media_id_string);
@@ -89,18 +89,18 @@ export class TwitterClient {
   }
 
   async uploadVideoInit(totalBytes: number, mediaType: string) {
-    const response = await this.client.post('media/upload', {
-      command: 'INIT',
+    const response = await this.client.post("media/upload", {
+      command: "INIT",
       total_bytes: totalBytes,
       media_type: mediaType,
-      media_category: 'tweet_video',
+      media_category: "tweet_video",
     });
-    return response['media_id_string'] as string;
+    return response["media_id_string"] as string;
   }
 
   async uploadVideoAppend(mediaId: string, media: Buffer, segmentIndex: number) {
-    return await this.client.post('media/upload', {
-      command: 'APPEND',
+    return await this.client.post("media/upload", {
+      command: "APPEND",
       media_id: mediaId,
       media,
       segment_index: segmentIndex,
@@ -108,28 +108,28 @@ export class TwitterClient {
   }
 
   async uploadVideoFinalize(mediaId: string) {
-    return await this.client.post('media/upload', {
-      command: 'FINALIZE',
+    return await this.client.post("media/upload", {
+      command: "FINALIZE",
       media_id: mediaId,
     });
   }
 
   async uploadVideoStatus(mediaId: string) {
     while (true) {
-      const statusResponse = await this.client.get('media/upload', {
-        command: 'STATUS',
+      const statusResponse = await this.client.get("media/upload", {
+        command: "STATUS",
         media_id: mediaId,
       });
       const {
         processing_info: { state, check_after_secs, progress_percent, error },
       } = statusResponse;
-      if (state === 'succeeded') {
+      if (state === "succeeded") {
         break;
       }
-      if (state === 'failed') {
+      if (state === "failed") {
         throw new Error(String(error));
       }
-      await new Promise(resolve => setTimeout(resolve, 1000 * (check_after_secs + 5)));
+      await new Promise((resolve) => setTimeout(resolve, 1000 * (check_after_secs + 5)));
     }
   }
 
