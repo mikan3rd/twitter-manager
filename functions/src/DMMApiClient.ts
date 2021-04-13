@@ -48,7 +48,6 @@ export type ItemType = {
     size_560_360: string;
     size_476_306: string;
   };
-  prices: {};
   date: string;
   iteminfo: {
     actress?: ItemActressType[];

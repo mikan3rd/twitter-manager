@@ -115,6 +115,7 @@ export class TwitterClient {
   }
 
   async uploadVideoStatus(mediaId: string) {
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       const statusResponse = await this.client.get("media/upload", {
         command: "STATUS",

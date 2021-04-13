@@ -250,6 +250,7 @@ export const getAvMovieStatus = (item: ItemType) => {
   let mainContentList = [itemTitle];
 
   let status = "";
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     status = mainContentList.concat([...actressContentList, ...genreContentList, ...linkContentList]).join("\n");
 

@@ -1,12 +1,11 @@
 import admin from "firebase-admin";
 import * as functions from "firebase-functions";
 
-import { AccountTypeList } from "./BotClient";
-
 admin.initializeApp();
 
 import { tweetAvPackage } from "./AvActressBot";
 import { tweetAvMovie } from "./AvMovieBot";
+import { AccountTypeList } from "./BotClient";
 import { autoFavoriteFollow, autoRetweetFollow, favoriteRandom, retweetRandom } from "./utils";
 
 export const bulkPostTweet = functions

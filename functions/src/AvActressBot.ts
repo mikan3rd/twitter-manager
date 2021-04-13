@@ -157,6 +157,7 @@ const getAvPackageStatus = (actressInfo: ActressType, actressItems: ItemType[]) 
   const hashtagList = createGenreHashtag([name, ...sortedGenreList]);
 
   let status = "";
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     status = mainContentList.concat([hashtagList.join(" "), ...linkContentList]).join("\n");
     if (status.length < 278) {
