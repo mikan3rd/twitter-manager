@@ -1,10 +1,10 @@
-import axios from 'axios';
-import * as functions from 'firebase-functions';
+import axios from "axios";
+import * as functions from "firebase-functions";
 
 const DMM_ENV = functions.config().dmm;
 const DMM_API_ID = DMM_ENV.api_id;
 const DMM_AFFILIATE_ID = DMM_ENV.affiliate_id;
-const DMM_ENDPOINT = 'https://api.dmm.com/affiliate/v3';
+const DMM_ENDPOINT = "https://api.dmm.com/affiliate/v3";
 
 type ItemResponse = {
   result: {
@@ -48,7 +48,6 @@ export type ItemType = {
     size_560_360: string;
     size_476_306: string;
   };
-  prices: {};
   date: string;
   iteminfo: {
     actress?: ItemActressType[];
@@ -96,21 +95,21 @@ export type ActressType = {
   };
 };
 
-export type ItemSortType = 'rank' | 'date' | 'price' | '-price' | 'review' | 'match';
+export type ItemSortType = "rank" | "date" | "price" | "-price" | "review" | "match";
 
 export class DMMApiClient {
   static async getItemList({
-    site = 'FANZA',
-    service = 'digital',
-    floor = 'videoa',
-    sort = 'rank',
+    site = "FANZA",
+    service = "digital",
+    floor = "videoa",
+    sort = "rank",
     keyword = null,
     article = null,
     articleId = null,
     hits = 100,
     offset = 1,
   }: {
-    site?: 'FANZA' | 'DMM.com';
+    site?: "FANZA" | "DMM.com";
     service?: string;
     floor?: string;
     sort?: ItemSortType;
@@ -133,7 +132,7 @@ export class DMMApiClient {
       article_id: articleId,
       hits,
       offset,
-      output: 'json',
+      output: "json",
     };
     return await axios.get<ItemResponse>(url, { params });
   }
@@ -151,7 +150,7 @@ export class DMMApiClient {
       affiliate_id: DMM_AFFILIATE_ID,
       actress_id: actressId,
       keyword: keyword,
-      output: 'json',
+      output: "json",
     };
     return await axios.get<ActressSearchResponse>(url, { params });
   }

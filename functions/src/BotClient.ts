@@ -1,5 +1,5 @@
-import * as Twitter from 'twitter';
-import * as functions from 'firebase-functions';
+import * as functions from "firebase-functions";
+import * as Twitter from "twitter";
 
 const TWITTER_ENV = functions.config().twitter;
 
@@ -24,7 +24,7 @@ const {
   recent_av_bot_password,
 } = TWITTER_ENV;
 
-export const AccountTypeList = ['av_video_bot', 'ero_video_bot', 'recent_av_bot'] as const;
+export const AccountTypeList = ["av_video_bot", "ero_video_bot", "recent_av_bot"] as const;
 export type AccountType = typeof AccountTypeList[number];
 
 export class BotClient {
@@ -49,13 +49,13 @@ export class BotClient {
   }
 
   static get(account: AccountType) {
-    if (account === 'av_video_bot') {
+    if (account === "av_video_bot") {
       return this.avVideoBot(account);
     }
-    if (account === 'ero_video_bot') {
+    if (account === "ero_video_bot") {
       return this.eroVideoBot(account);
     }
-    if (account === 'recent_av_bot') {
+    if (account === "recent_av_bot") {
       return this.recentVideoBot(account);
     }
     throw new Error(`NOT FOUND: ${account}`);
@@ -68,7 +68,7 @@ export class BotClient {
       access_token_key: av_video_bot_access_token_key,
       access_token_secret: av_video_bot_access_token_secret,
     };
-    return new BotClient(account, twitterConfig, 'av_actress_bot', av_video_bot_username, av_video_bot_password);
+    return new BotClient(account, twitterConfig, "av_actress_bot", av_video_bot_username, av_video_bot_password);
   }
 
   private static eroVideoBot(account: AccountType) {
@@ -78,7 +78,7 @@ export class BotClient {
       access_token_key: ero_video_bot_access_token_key,
       access_token_secret: ero_video_bot_access_token_secret,
     };
-    return new BotClient(account, twitterConfig, 'av_movie_bot', ero_video_bot_username, ero_video_bot_password);
+    return new BotClient(account, twitterConfig, "av_movie_bot", ero_video_bot_username, ero_video_bot_password);
   }
 
   private static recentVideoBot(account: AccountType) {
@@ -88,6 +88,6 @@ export class BotClient {
       access_token_key: recent_av_bot_access_token_key,
       access_token_secret: recent_av_bot_access_token_secret,
     };
-    return new BotClient(account, twitterConfig, 'recent_av_bot', recent_av_bot_username, recent_av_bot_password);
+    return new BotClient(account, twitterConfig, "recent_av_bot", recent_av_bot_username, recent_av_bot_password);
   }
 }

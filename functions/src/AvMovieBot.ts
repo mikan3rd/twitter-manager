@@ -1,17 +1,18 @@
-import axios from 'axios';
-import * as admin from 'firebase-admin';
-import * as puppeteer from 'puppeteer';
-import * as ffmpeg from 'fluent-ffmpeg';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
-import * as ffmpeg_static from 'ffmpeg-static';
-import * as ffprobe_static from 'ffprobe-static';
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
 
-import { BotClient, AccountType } from './BotClient';
-import { DMMApiClient, ItemType, ItemSortType } from './DMMApiClient';
-import { TwitterClient } from './TwitterClient';
-import { createGenreHashtag } from './utils';
+import axios from "axios";
+import * as ffmpeg_static from "ffmpeg-static";
+import * as ffprobe_static from "ffprobe-static";
+import admin from "firebase-admin";
+import * as ffmpeg from "fluent-ffmpeg";
+import * as puppeteer from "puppeteer";
+
+import { AccountType, BotClient } from "./BotClient";
+import { DMMApiClient, ItemSortType, ItemType } from "./DMMApiClient";
+import { TwitterClient } from "./TwitterClient";
+import { createGenreHashtag } from "./utils";
 
 ffmpeg.setFfmpegPath(ffmpeg_static);
 ffmpeg.setFfprobePath(ffprobe_static.path);
@@ -33,18 +34,15 @@ export const tweetAvMovie = async (account: AccountType, sort: ItemSortType) => 
 
 export const getTargetItem = async (bot: BotClient, sort: ItemSortType) => {
   const { documentPath } = bot;
-  const ref = admin
-    .firestore()
-    .collection('twitter')
-    .doc(documentPath);
+  const ref = admin.firestore().collection("twitter").doc(documentPath);
 
   const doc = await ref.get();
   let selecteContendIds: string[] = doc.data()?.selecteContendIds || [];
 
   const LIMIT = 10;
   let targetItem;
-  let tmpPath = '';
-  let mediaType = '';
+  let tmpPath = "";
+  let mediaType = "";
   let totalBytes = 0;
 
   for (const i of Array(LIMIT).keys()) {
@@ -81,7 +79,7 @@ export const getTargetItem = async (bot: BotClient, sort: ItemSortType) => {
       const format = await getMediaFormat(tmpPath);
       const { duration } = format;
       if (!duration || duration > 140) {
-        console.log('Duration is Over:', duration);
+        console.log("Duration is Over:", duration);
         selecteContendIds = selecteContendIds.concat([content_id]);
         continue;
       }
@@ -96,13 +94,13 @@ export const getTargetItem = async (bot: BotClient, sort: ItemSortType) => {
   }
 
   if (!targetItem) {
-    console.log('Reset selecteContendIds!!');
+    console.log("Reset selecteContendIds!!");
     await ref.set({ selecteContendIds: [] }, { merge: true });
     return null;
   }
 
   selecteContendIds = selecteContendIds.concat([targetItem.content_id]);
-  console.log('selecteContendIds:', selecteContendIds.length);
+  console.log("selecteContendIds:", selecteContendIds.length);
 
   await ref.set({ selecteContendIds }, { merge: true });
   return { item: targetItem, filePath: tmpPath, mediaType, totalBytes };
@@ -112,74 +110,74 @@ const getMoviewUrl = async (targetUrl: string) => {
   const browser = await puppeteer.launch({
     headless: true,
     devtools: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--autoplay-policy=no-user-gesture-required'],
+    args: ["--no-sandbox", "--disable-setuid-sandbox", "--autoplay-policy=no-user-gesture-required"],
   });
 
   const page = await browser.newPage();
 
   await page.goto(targetUrl);
-  const elementHandle = await page.$('iframe');
+  const elementHandle = await page.$("iframe");
   if (!elementHandle) {
     return null;
   }
 
-  const iframeUrl = (await (await elementHandle.getProperty('src')).jsonValue()) as string;
+  const iframeUrl = (await (await elementHandle.getProperty("src")).jsonValue()) as string;
   await page.goto(iframeUrl);
 
-  await page.waitForSelector('.modal-overlay');
+  await page.waitForSelector(".modal-overlay");
   await page.evaluate(() => {
-    const doms = document.querySelectorAll<HTMLElement>('.modal-overlay');
+    const doms = document.querySelectorAll<HTMLElement>(".modal-overlay");
     doms.forEach((ele, index) => {
       console.log(`modal: ${index + 1}`);
-      ele.style.display = 'none';
+      ele.style.display = "none";
     });
   });
 
-  const playerSelector = '.dgm-btn-playerCover';
+  const playerSelector = ".dgm-btn-playerCover";
   await page.waitForSelector(playerSelector);
   const playButton = await page.$(playerSelector);
   if (playButton) {
     await playButton.click();
   }
 
-  const pauseSelector = '.playpause';
+  const pauseSelector = ".playpause";
   await page.waitForSelector(pauseSelector);
   const pauseButton = await page.$(pauseSelector);
   if (pauseButton) {
     await pauseButton.click();
   }
 
-  const butttonSelector = '.btn-bitrate';
+  const butttonSelector = ".btn-bitrate";
   await page.waitForSelector(butttonSelector);
   const bitrateButton = await page.$(butttonSelector);
   if (bitrateButton) {
-    const bitrate = await (await bitrateButton.getProperty('textContent')).jsonValue();
+    const bitrate = await (await bitrateButton.getProperty("textContent")).jsonValue();
     console.log(bitrate);
   }
 
   await page.evaluate(() => {
-    const ele = document.querySelector<HTMLElement>('.box-bitrate');
+    const ele = document.querySelector<HTMLElement>(".box-bitrate");
     if (ele) {
-      ele.style.display = 'block';
+      ele.style.display = "block";
     }
   });
 
-  const videoElementHandle = await page.$('video');
+  const videoElementHandle = await page.$("video");
   if (!videoElementHandle) {
     return null;
   }
-  const url = (await (await videoElementHandle.getProperty('src')).jsonValue()) as string;
+  const url = (await (await videoElementHandle.getProperty("src")).jsonValue()) as string;
 
   await browser.close();
   return url;
 };
 
 const saveFile = async (url: string, documentPath: string) => {
-  const videoResponse = await axios.get(url, { responseType: 'arraybuffer' });
+  const videoResponse = await axios.get(url, { responseType: "arraybuffer" });
 
   const { headers, data } = videoResponse;
-  const mediaType = headers['content-type'];
-  const totalBytes = Number(headers['content-length']);
+  const mediaType = headers["content-type"];
+  const totalBytes = Number(headers["content-length"]);
 
   const fileName = `${documentPath}${path.extname(url)}`;
   const tmpPath = path.join(os.tmpdir(), fileName);
@@ -233,27 +231,28 @@ export const getAvMovieStatus = (item: ItemType) => {
 
   let itemTitle = title;
 
-  const linkContentList = ['', `【この動画の詳細はコチラ！】`, affiliateURL];
+  const linkContentList = ["", `【この動画の詳細はコチラ！】`, affiliateURL];
 
   let actressContentList: string[] = [];
   if (actress) {
-    const acressList = actress.map(target => `#${target.name}`);
-    actressContentList = ['', '【女優】', ...acressList];
+    const acressList = actress.map((target) => `#${target.name}`);
+    actressContentList = ["", "【女優】", ...acressList];
   }
 
   let genreContentList: string[] = [];
   if (genre) {
-    const genreList = genre.map(g => g.name);
+    const genreList = genre.map((g) => g.name);
     const hashtagList = createGenreHashtag(genreList);
-    genreContentList = ['', '【ジャンル】', ...hashtagList];
+    genreContentList = ["", "【ジャンル】", ...hashtagList];
   }
 
   itemTitle = itemTitle.trim();
   let mainContentList = [itemTitle];
 
-  let status = '';
+  let status = "";
+  // eslint-disable-next-line no-constant-condition
   while (true) {
-    status = mainContentList.concat([...actressContentList, ...genreContentList, ...linkContentList]).join('\n');
+    status = mainContentList.concat([...actressContentList, ...genreContentList, ...linkContentList]).join("\n");
 
     if (status.length < 278) {
       break;
@@ -274,9 +273,9 @@ export const getAvMovieStatus = (item: ItemType) => {
     } else {
       const overNum = status.length - 275;
       if (overNum <= 0) {
-        throw new Error('overNum is invalid');
+        throw new Error("overNum is invalid");
       }
-      itemTitle = itemTitle.slice(0, overNum * -1) + '...';
+      itemTitle = itemTitle.slice(0, overNum * -1) + "...";
       mainContentList = [itemTitle];
     }
   }
