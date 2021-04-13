@@ -1,5 +1,5 @@
 import axios from "axios";
-import * as Twitter from "twitter";
+import Twitter from "twitter";
 
 export type TweetObjectType = {
   id_str: string;
