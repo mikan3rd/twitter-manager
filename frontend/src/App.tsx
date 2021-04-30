@@ -1,21 +1,17 @@
 import { css } from "@emotion/react";
 import React from "react";
+import { Button, Icon } from "semantic-ui-react";
 
-export const App = () => {
+import { useTwitterLogin } from "./hooks/useTwitterLogin";
+
+export const App: React.VFC = () => {
+  const { connectTwitter } = useTwitterLogin();
   return (
     <div>
-      <header>
-        <p
-          css={css`
-            background-color: red;
-          `}
-        >
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a href="https://reactjs.org" target="_blank" rel="noopener noreferrer">
-          Learn React
-        </a>
-      </header>
+      <Button color="twitter" size="big" onClick={connectTwitter}>
+        <Icon name="twitter" />
+        Twitter連携
+      </Button>
     </div>
   );
 };
