@@ -9,7 +9,7 @@ type TwitterCredentialType = Omit<firebase.auth.UserCredential, "credential" | "
   additionalUserInfo: { username: string; profile: { id_str: string; name: string } };
 };
 
-export const useTwitterLogin = () => {
+export const useTwitterAuth = () => {
   const logout = React.useCallback(async () => {
     await firebase.auth().signOut();
   }, []);
@@ -19,7 +19,6 @@ export const useTwitterLogin = () => {
     provider.setCustomParameters({ force_login: true });
 
     const userCredential = await firebase.auth().signInWithPopup(provider);
-    console.log(userCredential);
 
     const {
       credential: { accessToken, secret },
