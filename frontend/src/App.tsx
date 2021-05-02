@@ -8,6 +8,7 @@ import { useTwitterAuth } from "./hooks/useTwitterAuth";
 import { Account, BotType, BotTypeList } from "./models/Account";
 
 const botTypeOptions = BotTypeList.map((boyType) => ({ value: boyType, text: boyType }));
+const DateFormat = "YYYY/MM/DD(ddd) HH:mm";
 
 export const App: React.VFC = () => {
   const { accounts, getAccounts } = useAccount();
@@ -81,12 +82,12 @@ export const App: React.VFC = () => {
 
                     <Table.Row>
                       <Table.Cell>updatedAt</Table.Cell>
-                      <Table.Cell>{updatedAt?.format("YYYY/MM/DD HH:mm")}</Table.Cell>
+                      <Table.Cell>{updatedAt?.format(DateFormat)}</Table.Cell>
                     </Table.Row>
 
                     <Table.Row>
                       <Table.Cell>createdAt</Table.Cell>
-                      <Table.Cell>{createdAt?.format("YYYY/MM/DD HH:mm")}</Table.Cell>
+                      <Table.Cell>{createdAt?.format(DateFormat)}</Table.Cell>
                     </Table.Row>
                   </Table.Body>
                 </Table>

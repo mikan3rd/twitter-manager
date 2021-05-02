@@ -64,7 +64,6 @@ export class Account {
 
   async saveFirestore() {
     const data = await this.toFirestoreObject();
-    console.log(data);
     await AccountsDB.doc(this.userId).set(data, { merge: true });
     toast({
       type: "success",
