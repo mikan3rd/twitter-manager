@@ -15,5 +15,5 @@ export type AccountType = {
   accessToken: string;
   secret: string;
   name: string;
-  botType: BotType;
+  botType?: BotType;
 };

@@ -66,3 +66,4 @@ node_modules/
 .runtimeconfig.json
 
 *.mp4
+lib

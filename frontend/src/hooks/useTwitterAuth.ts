@@ -26,7 +26,6 @@ export const useTwitterAuth = () => {
     provider.setCustomParameters({ force_login: true });
 
     const userCredential = await firebase.auth().signInWithPopup(provider);
-    console.log(userCredential);
 
     const {
       credential: { accessToken, secret },

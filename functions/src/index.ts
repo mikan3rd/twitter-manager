@@ -16,7 +16,7 @@ import { functions, scheduleFunctions } from "./firebase/functions";
 import { Topic } from "./firebase/pubsub";
 // import { autoFavoriteFollow, autoRetweetFollow, favoriteRandom, retweetRandom } from "./utils";
 
-export const bulkPostTweet = scheduleFunctions({ timeoutSeconds: 120 })("1 * * * *").onRun(async (context) => {
+export const bulkPostTweet = scheduleFunctions()("1 * * * *").onRun(async (context) => {
   const docs = await AccountsDB.get();
   const accountList: AccountType[] = [];
   docs.forEach((doc) => {

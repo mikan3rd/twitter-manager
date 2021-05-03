@@ -27,6 +27,7 @@ const {
 export const AccountTypeList = ["av_video_bot", "ero_video_bot", "recent_av_bot"] as const;
 export type AccountType = typeof AccountTypeList[number];
 
+// TODO: 不要になったら削除
 export class BotClient {
   account: AccountType;
   username: string;

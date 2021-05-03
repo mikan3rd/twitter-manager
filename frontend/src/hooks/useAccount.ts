@@ -16,8 +16,9 @@ export const useAccount = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const account = new Account(data as any);
       nextAccounts.push(account);
-      setAccounts(nextAccounts);
     });
+
+    setAccounts(nextAccounts);
   }, []);
 
   const changeAccount = React.useCallback(
