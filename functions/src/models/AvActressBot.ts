@@ -10,18 +10,17 @@ export class AvActressBot {
 
   constructor(
     userId: string,
-    params: {
+    params?: {
       userId: string;
       selectedActressIds?: number[];
       updatedAt?: FirebaseFirestore.Timestamp;
       createdAt?: FirebaseFirestore.Timestamp;
     },
   ) {
-    const { selectedActressIds, updatedAt, createdAt } = params;
     this.userId = userId;
-    this.selectedActressIds = selectedActressIds ?? [];
-    this.updatedAt = updatedAt ? dayjs(updatedAt.toDate()) : null;
-    this.createdAt = createdAt ? dayjs(createdAt.toDate()) : null;
+    this.selectedActressIds = params?.selectedActressIds ?? [];
+    this.updatedAt = params?.updatedAt ? dayjs(params.updatedAt.toDate()) : null;
+    this.createdAt = params?.createdAt ? dayjs(params.createdAt.toDate()) : null;
   }
 
   addSelectedActressIds(selectedActressIds: this["selectedActressIds"]) {

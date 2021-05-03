@@ -2,6 +2,7 @@ import axios from "axios";
 import Twitter from "twitter";
 
 import { CONFIG } from "./firebase/config";
+import { logger } from "./firebase/functions";
 
 export type TweetObjectType = {
   id_str: string;
@@ -88,12 +89,15 @@ export class TwitterClient {
     const mediaIds: string[] = [];
     for (const imageUrl of images) {
       const { data } = await axios.get(imageUrl, { responseType: "arraybuffer" });
-      const { media_id_string } = await this.client.post("media/upload", {
-        media: data,
-      });
-      mediaIds.push(media_id_string);
-      if (mediaIds.length >= 4) {
-        break;
+      try {
+        const { media_id_string } = await this.client.post("media/upload", { media: data });
+        mediaIds.push(media_id_string);
+        if (mediaIds.length >= 4) {
+          break;
+        }
+      } catch (e) {
+        logger.error(e);
+        throw Error("Please check abobe log!!");
       }
     }
     return mediaIds;

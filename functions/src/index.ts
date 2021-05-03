@@ -3,25 +3,29 @@ import dayjs from "dayjs";
 import admin from "firebase-admin";
 
 import "dayjs/locale/ja";
-
 dayjs.locale("ja");
 
 admin.initializeApp();
 
 import { tweetAvPackage } from "./AvActressBot";
-import { tweetAvMovie } from "./AvMovieBot";
-import { AccountTypeList } from "./BotClient";
+// import { tweetAvMovie } from "./AvMovieBot";
+// import { AccountTypeList } from "./BotClient";
 import { toBufferJson } from "./common/utils";
 import { AccountType, AccountsDB } from "./firebase/firestore";
 import { functions, scheduleFunctions } from "./firebase/functions";
 import { Topic } from "./firebase/pubsub";
-import { autoFavoriteFollow, autoRetweetFollow, favoriteRandom, retweetRandom } from "./utils";
+// import { autoFavoriteFollow, autoRetweetFollow, favoriteRandom, retweetRandom } from "./utils";
 
-export const bulkPostTweet = scheduleFunctions()("1 * * * *").onRun(async (context) => {
-  const pubSub = new PubSub();
+export const bulkPostTweet = scheduleFunctions({ timeoutSeconds: 120 })("1 * * * *").onRun(async (context) => {
   const docs = await AccountsDB.get();
-  docs.forEach(async (doc) => {
+  const accountList: AccountType[] = [];
+  docs.forEach((doc) => {
     const account = doc.data() as AccountType;
+    accountList.push(account);
+  });
+
+  const pubSub = new PubSub();
+  for (const account of accountList) {
     switch (account.botType) {
       case "AvActress":
         await pubSub.topic(Topic.PostAvActress).publish(toBufferJson(account));
@@ -30,7 +34,7 @@ export const bulkPostTweet = scheduleFunctions()("1 * * * *").onRun(async (conte
       default:
         break;
     }
-  });
+  }
 });
 
 export const postAvActressPubSub = functions.pubsub.topic(Topic.PostAvActress).onPublish(async (message) => {

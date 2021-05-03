@@ -229,7 +229,7 @@ export const getAvMovieStatus = (item: ItemType) => {
   const {
     title,
     affiliateURL,
-    iteminfo: { actress, genre, series },
+    iteminfo: { actress, genre },
   } = item;
 
   let itemTitle = title;
