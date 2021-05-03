@@ -167,7 +167,7 @@ const getAvPackageStatus = (actressInfo: ActressType, actressItems: ItemType[]) 
   let status = "";
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    status = mainContentList.concat([hashtagList.join(" "), ...linkContentList]).join("\n");
+    status = mainContentList.concat([hashtagList.join("\n"), ...linkContentList]).join("\n");
     if (status.length < 278) {
       break;
     }

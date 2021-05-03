@@ -1,7 +1,7 @@
 import { css } from "@emotion/react";
 import React from "react";
 import { SemanticToastContainer } from "react-semantic-toasts";
-import { Button, Container, Dropdown, Header, Icon, Segment, Table } from "semantic-ui-react";
+import { Button, Container, Dropdown, Header, Icon, Image, Segment, Table } from "semantic-ui-react";
 
 import { useAccount } from "./hooks/useAccount";
 import { useTwitterAuth } from "./hooks/useTwitterAuth";
@@ -48,24 +48,32 @@ export const App: React.VFC = () => {
           `}
         >
           {accounts.map((account) => {
-            const { userId, username, name, botType, createdAt, updatedAt } = account;
+            const { userId, username, name, profileImageUrl, botType, createdAt, updatedAt } = account;
             return (
               <Segment key={userId}>
+                <div
+                  css={css`
+                    display: flex;
+                    align-items: center;
+                  `}
+                >
+                  <Image src={profileImageUrl} size="tiny" circular />
+                  <div
+                    css={css`
+                      margin-left: 12px;
+                    `}
+                  >
+                    <Header content={name} />
+                    <a href={`https://twitter.com/${username}`} target="_blank" rel="noreferrer">
+                      @{username}
+                    </a>
+                  </div>
+                </div>
                 <Table celled striped unstackable>
                   <Table.Body>
                     <Table.Row>
                       <Table.Cell>userId</Table.Cell>
                       <Table.Cell>{userId}</Table.Cell>
-                    </Table.Row>
-
-                    <Table.Row>
-                      <Table.Cell>username</Table.Cell>
-                      <Table.Cell>{username}</Table.Cell>
-                    </Table.Row>
-
-                    <Table.Row>
-                      <Table.Cell>name</Table.Cell>
-                      <Table.Cell>{name}</Table.Cell>
                     </Table.Row>
 
                     <Table.Row>
