@@ -16,9 +16,9 @@ export class Account {
   accessToken: string;
   secret: string;
   name: string;
+  botType: BotType;
   updatedAt: null | dayjs.Dayjs;
   createdAt: null | dayjs.Dayjs;
-  botType: BotType;
 
   constructor(params: {
     userId: string;
@@ -41,7 +41,7 @@ export class Account {
     this.createdAt = createdAt ? dayjs(createdAt.toDate()) : null;
   }
 
-  setBotType(boyType: BotType) {
+  setBotType(boyType: this["botType"]) {
     return produce(this, (draft) => {
       draft.botType = boyType;
     });

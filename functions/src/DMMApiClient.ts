@@ -1,7 +1,8 @@
 import axios from "axios";
-import * as functions from "firebase-functions";
 
-const DMM_ENV = functions.config().dmm;
+import { CONFIG } from "./firebase/config";
+
+const DMM_ENV = CONFIG.dmm;
 const DMM_API_ID = DMM_ENV.api_id;
 const DMM_AFFILIATE_ID = DMM_ENV.affiliate_id;
 const DMM_ENDPOINT = "https://api.dmm.com/affiliate/v3";

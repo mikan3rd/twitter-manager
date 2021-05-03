@@ -1,6 +1,9 @@
 import axios from "axios";
 import Twitter from "twitter";
 
+import { CONFIG } from "./firebase/config";
+import { logger } from "./firebase/functions";
+
 export type TweetObjectType = {
   id_str: string;
   retweeted: boolean;
@@ -29,8 +32,17 @@ export class TwitterClient {
     this.client = client;
   }
 
-  static get(twitterConfig: Twitter.AccessTokenOptions) {
-    const client = new Twitter(twitterConfig);
+  static get(params: {
+    accessTokenKey: Twitter.AccessTokenOptions["access_token_key"];
+    accessTokenSecret: Twitter.AccessTokenOptions["access_token_secret"];
+  }) {
+    const { accessTokenKey, accessTokenSecret } = params;
+    const client = new Twitter({
+      consumer_key: CONFIG.twitter.consumer_key,
+      consumer_secret: CONFIG.twitter.consumer_secret,
+      access_token_key: accessTokenKey,
+      access_token_secret: accessTokenSecret,
+    });
     return new TwitterClient(client);
   }
 
@@ -77,12 +89,15 @@ export class TwitterClient {
     const mediaIds: string[] = [];
     for (const imageUrl of images) {
       const { data } = await axios.get(imageUrl, { responseType: "arraybuffer" });
-      const { media_id_string } = await this.client.post("media/upload", {
-        media: data,
-      });
-      mediaIds.push(media_id_string);
-      if (mediaIds.length >= 4) {
-        break;
+      try {
+        const { media_id_string } = await this.client.post("media/upload", { media: data });
+        mediaIds.push(media_id_string);
+        if (mediaIds.length >= 4) {
+          break;
+        }
+      } catch (e) {
+        logger.error(e);
+        throw Error("Please check abobe log!!");
       }
     }
     return mediaIds;
@@ -122,7 +137,7 @@ export class TwitterClient {
         media_id: mediaId,
       });
       const {
-        processing_info: { state, check_after_secs, progress_percent, error },
+        processing_info: { state, check_after_secs, error },
       } = statusResponse;
       if (state === "succeeded") {
         break;

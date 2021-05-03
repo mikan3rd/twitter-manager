@@ -25,7 +25,10 @@ export const createGenreHashtag = (words: string[]) => {
 
 export const retweetRandom = async (account: AccountType) => {
   const bot = BotClient.get(account);
-  const client = TwitterClient.get(bot.twitterConfig);
+  const client = TwitterClient.get({
+    accessTokenKey: bot.twitterConfig.access_token_key,
+    accessTokenSecret: bot.twitterConfig.access_token_secret,
+  });
   const targetAccount = AccountTypeList[Math.floor(Math.random() * AccountTypeList.length)];
   const tweets = await client.getUserTimeline(targetAccount);
   const sortedTweets = tweets.sort((a, b) => (a.favorite_count > b.favorite_count ? -1 : 1));
@@ -37,7 +40,10 @@ export const retweetRandom = async (account: AccountType) => {
 
 export const favoriteRandom = async (account: AccountType) => {
   const bot = BotClient.get(account);
-  const client = TwitterClient.get(bot.twitterConfig);
+  const client = TwitterClient.get({
+    accessTokenKey: bot.twitterConfig.access_token_key,
+    accessTokenSecret: bot.twitterConfig.access_token_secret,
+  });
   const targetAccount = AccountTypeList[Math.floor(Math.random() * AccountTypeList.length)];
   const tweets = await client.getUserTimeline(targetAccount);
   const sortedTweets = tweets.sort((a, b) => (a.favorite_count > b.favorite_count ? -1 : 1));
@@ -49,7 +55,10 @@ export const favoriteRandom = async (account: AccountType) => {
 
 export const autoRetweetFollow = async (account: AccountType) => {
   const bot = BotClient.get(account);
-  const client = TwitterClient.get(bot.twitterConfig);
+  const client = TwitterClient.get({
+    accessTokenKey: bot.twitterConfig.access_token_key,
+    accessTokenSecret: bot.twitterConfig.access_token_secret,
+  });
 
   const tweets = await getTargetListTweets(client, bot.documentPath);
   if (!tweets) {
@@ -70,7 +79,10 @@ export const autoRetweetFollow = async (account: AccountType) => {
 
 export const autoFavoriteFollow = async (account: AccountType) => {
   const bot = BotClient.get(account);
-  const client = TwitterClient.get(bot.twitterConfig);
+  const client = TwitterClient.get({
+    accessTokenKey: bot.twitterConfig.access_token_key,
+    accessTokenSecret: bot.twitterConfig.access_token_secret,
+  });
 
   const tweets = await getTargetListTweets(client, bot.documentPath);
   if (!tweets) {

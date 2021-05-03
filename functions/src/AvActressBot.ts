@@ -1,31 +1,31 @@
-import admin from "firebase-admin";
-
-import { BotClient } from "./BotClient";
 import { ActressType, DMMApiClient, ItemActressType, ItemGenreType, ItemType } from "./DMMApiClient";
 import { TwitterClient } from "./TwitterClient";
+import { AccountType, AvActressBotsDB } from "./firebase/firestore";
+import { logger } from "./firebase/functions";
+import { AvActressBot } from "./models/AvActressBot";
 import { createGenreHashtag } from "./utils";
 
-const ref = admin.firestore().collection("twitter").doc("av_actress_bot");
+export const tweetAvPackage = async (account: AccountType) => {
+  const { accessToken, secret } = account;
 
-export const tweetAvPackage = async () => {
-  const actressInfo = await getTargetActress();
+  const actressInfo = await getTargetActress(account);
   const actressItems = await getActressItems(Number(actressInfo.id));
   const status = getAvPackageStatus(actressInfo, actressItems);
   const images = actressItems.map((item) => item["imageURL"]["large"]);
 
-  const bot = BotClient.get("av_video_bot");
-  const client = TwitterClient.get(bot.twitterConfig);
+  const client = TwitterClient.get({ accessTokenKey: accessToken, accessTokenSecret: secret });
   const mediaIds = await client.uploadImages(images);
-  const result = await client.postTweet({ status, mediaIds });
+  await client.postTweet({ status, mediaIds });
 };
 
-const getTargetActress = async () => {
-  const doc = await ref.get();
-  let selectedActressIds: number[] = doc.data()?.selectedActressIds || [];
+const getTargetActress = async (account: AccountType) => {
+  const doc = await AvActressBotsDB.doc(account.userId).get();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const avActressBot = new AvActressBot(account.userId, doc.data() as any);
 
   const LIMIT = 10;
-  let targetActress;
-  let firstActress;
+  let targetActress: ActressType | undefined;
+  let firstActress: ActressType | undefined;
   for (const i of Array(LIMIT).keys()) {
     const itemResponse = await DMMApiClient.getItemList({
       keyword: "単体作品",
@@ -49,7 +49,7 @@ const getTargetActress = async () => {
           firstActress = result;
         }
       }
-      if (selectedActressIds.includes(tmpActress.id)) {
+      if (avActressBot.selectedActressIds.includes(tmpActress.id)) {
         continue;
       }
       const actress = await getActressInfo(tmpActress.id);
@@ -57,26 +57,34 @@ const getTargetActress = async () => {
         targetActress = actress;
         break;
       }
-      selectedActressIds = selectedActressIds.concat([tmpActress.id]);
+      avActressBot.addSelectedActressIds([tmpActress.id]);
     }
 
     if (targetActress) {
-      console.log(`${i + 1} / ${LIMIT}`);
+      logger.log(`${i + 1} / ${LIMIT}`);
       break;
     }
   }
 
   if (!targetActress) {
-    console.log("New Actress Not Found!");
-    targetActress = firstActress as ActressType;
-    selectedActressIds = [];
+    logger.log("New Actress Not Found!");
+    if (firstActress) {
+      targetActress = firstActress;
+    }
+    avActressBot.clearSelectedActressIds();
   }
 
-  selectedActressIds = selectedActressIds.concat([Number(targetActress.id)]);
-  console.log(targetActress.id, targetActress.name);
-  console.log("selectedActressIds:", selectedActressIds.length);
+  if (targetActress) {
+    avActressBot.addSelectedActressIds([Number(targetActress.id)]);
+    logger.log(targetActress.id, targetActress.name);
+  }
+  logger.log("selectedActressIds:", avActressBot.selectedActressIds.length);
 
-  await ref.set({ selectedActressIds }, { merge: true });
+  await avActressBot.saveFirestore();
+
+  if (!targetActress) {
+    throw Error("targetActress was not fonund!!");
+  }
 
   return targetActress;
 };
