@@ -27,9 +27,12 @@ export const tweetAvMovie = async (account: AccountType, sort: ItemSortType) => 
   const { item, filePath, mediaType, totalBytes } = target;
   const status = getAvMovieStatus(item);
 
-  const client = TwitterClient.get(bot.twitterConfig);
+  const client = TwitterClient.get({
+    accessTokenKey: bot.twitterConfig.access_token_key,
+    accessTokenSecret: bot.twitterConfig.access_token_secret,
+  });
   const mediaId = await uploadTwitterMedia(client, filePath, mediaType, totalBytes);
-  const result = await client.postTweet({ status, mediaIds: [mediaId] });
+  await client.postTweet({ status, mediaIds: [mediaId] });
 };
 
 export const getTargetItem = async (bot: BotClient, sort: ItemSortType) => {

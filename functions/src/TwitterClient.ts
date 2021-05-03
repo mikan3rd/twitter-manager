@@ -1,6 +1,8 @@
 import axios from "axios";
 import Twitter from "twitter";
 
+import { CONFIG } from "./firebase/config";
+
 export type TweetObjectType = {
   id_str: string;
   retweeted: boolean;
@@ -29,8 +31,17 @@ export class TwitterClient {
     this.client = client;
   }
 
-  static get(twitterConfig: Twitter.AccessTokenOptions) {
-    const client = new Twitter(twitterConfig);
+  static get(params: {
+    accessTokenKey: Twitter.AccessTokenOptions["access_token_key"];
+    accessTokenSecret: Twitter.AccessTokenOptions["access_token_secret"];
+  }) {
+    const { accessTokenKey, accessTokenSecret } = params;
+    const client = new Twitter({
+      consumer_key: CONFIG.twitter.consumer_key,
+      consumer_secret: CONFIG.twitter.consumer_secret,
+      access_token_key: accessTokenKey,
+      access_token_secret: accessTokenSecret,
+    });
     return new TwitterClient(client);
   }
 
@@ -122,7 +133,7 @@ export class TwitterClient {
         media_id: mediaId,
       });
       const {
-        processing_info: { state, check_after_secs, progress_percent, error },
+        processing_info: { state, check_after_secs, error },
       } = statusResponse;
       if (state === "succeeded") {
         break;

@@ -1,4 +1,3 @@
-import { BotClient } from "./BotClient";
 import { ActressType, DMMApiClient, ItemActressType, ItemGenreType, ItemType } from "./DMMApiClient";
 import { TwitterClient } from "./TwitterClient";
 import { AccountType, AvActressBotsDB } from "./firebase/firestore";
@@ -7,13 +6,14 @@ import { AvActressBot } from "./models/AvActressBot";
 import { createGenreHashtag } from "./utils";
 
 export const tweetAvPackage = async (account: AccountType) => {
+  const { accessToken, secret } = account;
+
   const actressInfo = await getTargetActress(account);
   const actressItems = await getActressItems(Number(actressInfo.id));
   const status = getAvPackageStatus(actressInfo, actressItems);
   const images = actressItems.map((item) => item["imageURL"]["large"]);
 
-  const bot = BotClient.get("av_video_bot");
-  const client = TwitterClient.get(bot.twitterConfig);
+  const client = TwitterClient.get({ accessTokenKey: accessToken, accessTokenSecret: secret });
   const mediaIds = await client.uploadImages(images);
   await client.postTweet({ status, mediaIds });
 };
