@@ -2,6 +2,8 @@ import { PubSub } from "@google-cloud/pubsub";
 import dayjs from "dayjs";
 import admin from "firebase-admin";
 
+process.env.TZ = "Asia/Tokyo";
+
 import "dayjs/locale/ja";
 dayjs.locale("ja");
 
