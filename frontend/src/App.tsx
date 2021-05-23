@@ -1,7 +1,7 @@
 import { css } from "@emotion/react";
 import React from "react";
 import { SemanticToastContainer } from "react-semantic-toasts";
-import { Button, Container, Dropdown, Header, Icon, Image, Segment, Table } from "semantic-ui-react";
+import { Button, Container, Dropdown, Header, Icon, Image, Modal, Segment, Table } from "semantic-ui-react";
 
 import { useAccount } from "./hooks/useAccount";
 import { useTwitterAuth } from "./hooks/useTwitterAuth";
@@ -14,6 +14,12 @@ export const App: React.VFC = () => {
   const { accounts, getAccounts } = useAccount();
   const { connectTwitter } = useTwitterAuth();
 
+  const [userIdForDelete, setUserIdForDelete] = React.useState<Account["userId"] | null>(null);
+  const accountForDelete = React.useMemo(() => accounts.find((account) => account.userId === userIdForDelete), [
+    accounts,
+    userIdForDelete,
+  ]);
+
   const handleConnectTwitter = React.useCallback(async () => {
     await connectTwitter();
     await getAccounts();
@@ -23,6 +29,15 @@ export const App: React.VFC = () => {
     async (account: Account) => {
       await account.saveFirestore();
       await getAccounts();
+    },
+    [getAccounts],
+  );
+
+  const handleDeleteAccount = React.useCallback(
+    async (account?: Account) => {
+      await account?.deleteFirestore();
+      await getAccounts();
+      setUserIdForDelete(null);
     },
     [getAccounts],
   );
@@ -56,19 +71,29 @@ export const App: React.VFC = () => {
                   <div
                     css={css`
                       display: flex;
-                      align-items: center;
+                      justify-content: space-between;
                     `}
                   >
-                    <Image src={profileImageUrl} size="tiny" circular />
                     <div
                       css={css`
-                        margin-left: 12px;
+                        display: flex;
+                        align-items: center;
                       `}
                     >
-                      <Header content={name} />
-                      <a href={`https://twitter.com/${username}`} target="_blank" rel="noreferrer">
-                        @{username}
-                      </a>
+                      <Image src={profileImageUrl} size="tiny" circular />
+                      <div
+                        css={css`
+                          margin-left: 12px;
+                        `}
+                      >
+                        <Header content={name} />
+                        <a href={`https://twitter.com/${username}`} target="_blank" rel="noreferrer">
+                          @{username}
+                        </a>
+                      </div>
+                    </div>
+                    <div>
+                      <Button negative content="削除" onClick={() => setUserIdForDelete(account.userId)} />
                     </div>
                   </div>
                   <Table celled striped unstackable>
@@ -106,6 +131,25 @@ export const App: React.VFC = () => {
             })}
         </div>
       </Container>
+
+      <Modal open={userIdForDelete !== null}>
+        <Modal.Header content="アカウントの管理を解除" />
+        <Modal.Content>
+          <span
+            css={css`
+              font-weight: bold;
+              margin-right: 4px;
+            `}
+          >
+            {accountForDelete?.name} （@{accountForDelete?.username}）
+          </span>
+          を削除しますか？
+        </Modal.Content>
+        <Modal.Actions>
+          <Button content="キャンセル" onClick={() => setUserIdForDelete(null)} />
+          <Button negative content="削除" onClick={() => handleDeleteAccount(accountForDelete)} />
+        </Modal.Actions>
+      </Modal>
 
       <SemanticToastContainer position="top-center" />
     </>

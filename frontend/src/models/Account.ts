@@ -87,4 +87,13 @@ export class Account {
       title: `${name}の更新に成功しました`,
     });
   }
+
+  async deleteFirestore() {
+    const { userId, name } = this;
+    await AccountsDB.doc(userId).delete();
+    toast({
+      type: "success",
+      title: `${name}の削除に成功しました`,
+    });
+  }
 }
