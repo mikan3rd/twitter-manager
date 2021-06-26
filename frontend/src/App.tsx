@@ -15,10 +15,10 @@ export const App: React.VFC = () => {
   const { connectTwitter } = useTwitterAuth();
 
   const [userIdForDelete, setUserIdForDelete] = React.useState<Account["userId"] | null>(null);
-  const accountForDelete = React.useMemo(() => accounts.find((account) => account.userId === userIdForDelete), [
-    accounts,
-    userIdForDelete,
-  ]);
+  const accountForDelete = React.useMemo(
+    () => accounts.find((account) => account.userId === userIdForDelete),
+    [accounts, userIdForDelete],
+  );
 
   const handleConnectTwitter = React.useCallback(async () => {
     await connectTwitter();
