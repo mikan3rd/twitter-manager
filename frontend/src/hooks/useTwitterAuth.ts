@@ -33,7 +33,7 @@ export const useTwitterAuth = () => {
         username,
         profile: { id_str: userId, name, profile_image_url_https: profileImageUrl },
       },
-    } = (userCredential as unknown) as TwitterCredentialType;
+    } = userCredential as unknown as TwitterCredentialType;
 
     const account = new Account({ userId, username, accessToken, secret, name, profileImageUrl });
     await account.saveFirestoreForTwitterAuth();
