@@ -17,7 +17,7 @@
   "main": "lib/index.js",
   "dependencies": {
     "@google-cloud/pubsub": "2.17.0",
-    "axios": "0.21.1",
+    "axios": "0.21.2",
     "dayjs": "1.10.6",
     "ffmpeg-static": "4.4.0",
     "ffprobe-static": "3.0.0",
