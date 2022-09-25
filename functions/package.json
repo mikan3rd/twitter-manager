@@ -12,7 +12,7 @@
     "emulators": "firebase emulators:start"
   },
   "engines": {
-    "node": "14"
+    "node": "16"
   },
   "main": "lib/index.js",
   "dependencies": {
@@ -31,7 +31,7 @@
     "@types/ffmpeg-static": "3.0.0",
     "@types/ffprobe-static": "2.0.0",
     "@types/fluent-ffmpeg": "2.1.20",
-    "@types/node": "14.18.0",
+    "@types/node": "16.11.60",
     "@types/puppeteer": "3.0.6",
     "@types/twitter": "1.7.1",
     "@typescript-eslint/eslint-plugin": "4.33.0",
